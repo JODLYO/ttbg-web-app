@@ -1,0 +1,35 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Head -->
+  <circle cx="100" cy="70" r="14" fill="#2c2c2c"/>
+  
+  <!-- Thorax -->
+  <ellipse cx="100" cy="95" rx="16" ry="14" fill="#2c2c2c"/>
+  
+  <!-- Abdomen with stripes (black and yellow) -->
+  <ellipse cx="100" cy="130" rx="20" ry="35" fill="#2c2c2c"/>
+  <ellipse cx="100" cy="115" rx="19" ry="8" fill="#FFC107"/>
+  <ellipse cx="100" cy="130" rx="19" ry="8" fill="#FFC107"/>
+  <ellipse cx="100" cy="145" rx="19" ry="8" fill="#FFC107"/>
+  
+  <!-- Wings -->
+  <ellipse cx="85" cy="95" rx="25" ry="15" fill="#3a3a3a" opacity="0.4" transform="rotate(-30 85 95)"/>
+  <ellipse cx="115" cy="95" rx="25" ry="15" fill="#3a3a3a" opacity="0.4" transform="rotate(30 115 95)"/>
+  
+  <!-- Antennae -->
+  <path d="M 94 62 Q 88 50 85 40" stroke="#2c2c2c" stroke-width="2" fill="none"/>
+  <path d="M 106 62 Q 112 50 115 40" stroke="#2c2c2c" stroke-width="2" fill="none"/>
+  
+  <!-- Legs -->
+  <path d="M 88 90 Q 70 92 60 95" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 112 90 Q 130 92 140 95" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <path d="M 85 100 Q 65 105 55 110" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 115 100 Q 135 105 145 110" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <path d="M 88 108 Q 68 115 58 122" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 112 108 Q 132 115 142 122" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Eyes -->
+  <circle cx="96" cy="68" r="2.5" fill="#4a4a4a"/>
+  <circle cx="104" cy="68" r="2.5" fill="#4a4a4a"/>
+</svg>

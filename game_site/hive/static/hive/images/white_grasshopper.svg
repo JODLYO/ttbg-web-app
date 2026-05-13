@@ -1,0 +1,34 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Head -->
+  <ellipse cx="100" cy="70" rx="15" ry="12" fill="#2d5016"/>
+  
+  <!-- Thorax -->
+  <ellipse cx="100" cy="95" rx="18" ry="15" fill="#2d5016"/>
+  
+  <!-- Abdomen (long) -->
+  <ellipse cx="100" cy="135" rx="20" ry="45" fill="#2d5016"/>
+  
+  <!-- Wings -->
+  <ellipse cx="95" cy="115" rx="12" ry="35" fill="#4a7c2c" opacity="0.7"/>
+  <ellipse cx="105" cy="115" rx="12" ry="35" fill="#4a7c2c" opacity="0.7"/>
+  
+  <!-- Antennae -->
+  <path d="M 92 65 Q 80 50 75 40" stroke="#2c2c2c" stroke-width="2" fill="none"/>
+  <path d="M 108 65 Q 120 50 125 40" stroke="#2c2c2c" stroke-width="2" fill="none"/>
+  
+  <!-- Front legs (small) -->
+  <path d="M 85 85 Q 65 85 55 90" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 115 85 Q 135 85 145 90" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Middle legs -->
+  <path d="M 82 100 Q 60 105 50 115" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 118 100 Q 140 105 150 115" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Back jumping legs (large, bent) -->
+  <path d="M 85 125 Q 50 130 40 145 Q 45 160 55 165" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  <path d="M 115 125 Q 150 130 160 145 Q 155 160 145 165" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  
+  <!-- Eyes -->
+  <circle cx="95" cy="68" r="3" fill="#4a4a4a"/>
+  <circle cx="105" cy="68" r="3" fill="#4a4a4a"/>
+</svg>

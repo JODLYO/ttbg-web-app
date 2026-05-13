@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SET - Lobby</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Lato:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/lobby.css' %}">
+    <link rel="stylesheet" href="{% static 'set_game/css/lobby.css' %}">
+</head>
+
+<body>
+    <div class="container">
+        <p class="lobby-eyebrow">Pattern Recognition</p>
+        <h1>SET</h1>
+        <div class="lobby-divider"></div>
+
+        <div id="lobby-id" data-lobby-id="{{ lobby.id }}"
+            data-lobby-status-url="{% url 'set-game:lobby_status' lobby.id %}">
+        </div>
+        <div id="current-player" style="display: none;">{{ request.user.username }}</div>
+
+        <div id="player-count" class="player-count"></div>
+
+        <div id="players"></div>
+
+        <div id="waiting-message" class="waiting-message" style="display: none;">
+            ⏳ Waiting for another player...
+        </div>
+
+        <div id="ready-button"></div>
+        <div id="ready-form-container" data-ready-url="{% url 'set-game:lobby' %}"></div>
+        <div id="game-url" data-ready-url="{% url 'set-game:game_board' 0 %}"></div>
+
+        <div class="back-link">
+            <a href="{% url 'home:home' %}" class="game-button">← Back to Home</a>
+        </div>
+    </div>
+
+    <script src="{% static 'set_game/js/lobby.js' %}"></script>
+</body>
+
+</html>

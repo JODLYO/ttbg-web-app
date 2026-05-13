@@ -1,0 +1,243 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+    
+    services:
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .venv
+          ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction --no-root
+    
+    - name: Install project
+      run: poetry install --no-interaction
+    
+    - name: Run tests
+      env:
+        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      run: |
+        cd game_site
+        poetry run pytest
+    
+    - name: Run type checking
+      run: |
+        cd game_site
+        poetry run mypy .
+    
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    
+    - name: Run ruff
+      run: poetry run ruff check
+    
+  docker:
+    name: Build and Test Docker
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker images
+      run: docker compose build
+    
+    - name: Start containers with memory limits
+      env:
+        DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+        DB_NAME: ci_db
+        DB_USER: ci_user
+        DB_PASSWORD: ci_password
+      run: |
+        docker compose up -d --force-recreate
+        docker compose ps
+    
+    - name: Verify web service is healthy
+      run: |
+        docker compose ps
+        docker compose logs web
+        docker compose exec web python manage.py check --deploy
+    
+    - name: Stop containers
+      if: always()
+      run: docker compose down
+
+  release:
+    name: Build & Push Production Docker Image
+    needs: [test, lint, docker]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Log in to DigitalOcean Container Registry
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.DOCR_REGISTRY }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+    - name: Build production image
+      run: |
+        docker build \
+          --build-arg INSTALL_TYPE=main \
+          -t ${{ secrets.DOCR_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest .
+    - name: Push image to DOCR
+      run: |
+        docker push ${{ secrets.DOCR_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: [test, lint, docker]
+    if: github.ref != 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Configure Terraform Credentials
+        env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          mkdir -p ~/.terraform.d/
+          cat > ~/.terraform.d/credentials.tfrc.json <<EOF
+          {
+            "credentials": {
+              "app.terraform.io": {
+                "token": "$TF_API_TOKEN"
+              }
+            }
+          }
+          EOF
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -no-color
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan -no-color -input=false
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: [release]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+        
+      - name: Configure Terraform Credentials
+        env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          mkdir -p ~/.terraform.d/
+          cat > ~/.terraform.d/credentials.tfrc.json <<EOF
+          {
+            "credentials": {
+              "app.terraform.io": {
+                "token": "$TF_API_TOKEN"
+              }
+            }
+          }
+          EOF
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -no-color
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve -no-color
+
+      - name: Copy production config to Droplet
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.SSH_KEYS }}
+          source: "prod/docker-compose.yml,prod/nginx.conf"
+          target: "/root/board_game_site"
+          strip_components: 1
+          port: 22
+
+      - name: Deploy with Docker Compose
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.SSH_KEYS }}
+          script: |
+            cd /root/board_game_site
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.DOCR_REGISTRY }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+            export DOCR_REGISTRY="${{ secrets.DOCR_REGISTRY }}"
+            export IMAGE_NAME="${{ secrets.IMAGE_NAME }}"
+            docker compose down --remove-orphans
+            docker compose pull
+            docker compose up -d --force-recreate

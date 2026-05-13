@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="{% static 'home/images/favicon.ico' %}">
+    <title>Table Top Board Games</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Lato:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'home/css/home.css' %}">
+</head>
+
+<body>
+
+    <div class="page-wrapper">
+
+        <!-- HERO -->
+        <header class="hero">
+            <div class="hero-glow"></div>
+            <p class="hero-eyebrow">Welcome to</p>
+            <h1 class="site-title"><span>Table Top Board Games</span></h1>
+            <p class="hero-sub">Gather your friends. Choose your game. Let the fun begin.</p>
+
+            <!-- Name form -->
+            <div class="name-card">
+                {% if user.is_authenticated %}
+                <p class="welcome-msg">Welcome back, <strong>{{ user.username }}</strong>!</p>
+                <form method="post" id="nameForm" onsubmit="return false;">
+                    {% csrf_token %}
+                    <input type="hidden" name="game_mode" id="gameMode" value="lobby">
+                    {% if error %}
+                    <p class="error-msg">{{ error }}</p>
+                    {% endif %}
+                </form>
+                {% else %}
+                <form method="post" id="nameForm" onsubmit="return false;">
+                    {% csrf_token %}
+                    <label for="username">Your player name</label>
+                    <input id="username" class="hero-input" type="text" name="username"
+                        placeholder="Enter a name to play…" required autocomplete="off">
+                    <input type="hidden" name="game_mode" id="gameMode" value="lobby">
+                    {% if error %}
+                    <p class="error-msg">{{ error }}</p>
+                    {% endif %}
+                </form>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- GAME CARDS -->
+        <p class="section-label">Choose a game</p>
+
+        <div class="games-grid">
+
+            <!-- Dragon in the Forest -->
+            <div class="game-card">
+                <img src="{% static 'home/images/dragon_in_the_forest_logo.jpg' %}" alt="Dragon in the Forest">
+                <div class="card-body">
+                    <p class="card-tag">Trick-taking</p>
+                    <p class="card-title">Dragon in the Forest</p>
+                    <p class="card-desc">Bridge got a fairytale upgrade (2 players).
+                    </p>
+                    <div class="card-actions">
+                        <button class="btn btn-primary" onclick="setGameMode('dragon_forest')">Join Lobby</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SET -->
+            <div class="game-card">
+                <img src="{% static 'home/images/set.jpg' %}" alt="SET">
+                <div class="card-body">
+                    <p class="card-tag">Pattern Recognition</p>
+                    <p class="card-title">SET</p>
+                    <p class="card-desc">Spot the sets faster than anyone else. A fast-paced visual card game.</p>
+                    <div class="card-actions">
+                        <button class="btn btn-primary" onclick="setGameMode('lobby')">Join Lobby</button>
+                        <button class="btn btn-secondary" onclick="setGameMode('single')">Solo Play</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hive -->
+            <div class="game-card">
+                <img src="{% static 'home/images/hive.jpg' %}" alt="Hive">
+                <div class="card-body">
+                    <p class="card-tag">Strategy</p>
+                    <p class="card-title">Hive</p>
+                    <p class="card-desc">Basically hexagonal chess with insects. Currently desktop only.</p>
+                    <div class="card-actions">
+                        <button class="btn btn-primary" onclick="setGameMode('hive')">Join Lobby</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="hr-ornament">✦ ✦ ✦</div>
+
+        <!-- FOOTER -->
+        <footer>
+            <div>
+                <h3>What's Coming</h3>
+                <p>More games and features on the way.</p>
+                <li>Github link coming soon (soon to be open source)</li>
+            </div>
+            <div>
+                <h3>Tags</h3>
+                <span class="tag-pill">Games</span>
+                <span class="tag-pill">Multiplayer</span>
+                <span class="tag-pill">Card</span>
+                <span class="tag-pill">Strategy</span>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        function setGameMode(mode) {
+            document.getElementById('gameMode').value = mode;
+            document.getElementById('nameForm').submit();
+        }
+
+        // If the browser restores this page from history (user pressed back), the
+        // form may contain an outdated CSRF token.  Reloading forces middleware to
+        // issue a fresh token and keeps the session alive.
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted || window.performance && window.performance.navigation.type === 2) {
+                window.location.reload();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

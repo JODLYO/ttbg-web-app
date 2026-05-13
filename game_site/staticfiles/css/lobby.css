@@ -1,0 +1,381 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #0d0d12;
+    --surface: #15151e;
+    --card: #1a1a26;
+    --border: #2e2e45;
+    --gold: #c9a84c;
+    --gold-dim: #7a6330;
+    --teal: #2dd4bf;
+    --text: #e8e6df;
+    --muted: #8a8778;
+    --red: #e05c5c;
+    --green: #4caf7d;
+    --yellow: #e0b84c;
+}
+
+html,
+body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: .5;
+}
+
+/* ── GLOW ── */
+body::after {
+    content: '';
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 500px;
+    background: radial-gradient(ellipse at center, rgba(201, 168, 76, .09) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ── CONTAINER ── */
+.container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 40px 44px 44px;
+    max-width: 560px;
+    width: calc(100% - 32px);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
+    opacity: 0;
+    animation: fadeUp .6s .1s ease forwards;
+}
+
+/* ── EYEBROW ── */
+.lobby-eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: .7rem;
+    letter-spacing: .35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+}
+
+/* ── TITLE ── */
+h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--gold) 0%, #e8d5a3 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 28px;
+    line-height: 1.2;
+}
+
+/* ── DIVIDER ── */
+.lobby-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 0 28px;
+}
+
+/* ── PLAYER COUNT ── */
+.player-count {
+    font-family: 'Cinzel', serif;
+    font-size: .72rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+}
+
+/* ── PLAYERS LIST ── */
+#players {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* player cards injected by JS — style the wrapper divs generically */
+#players>div,
+.player-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: .95rem;
+    transition: border-color .2s;
+}
+
+#players>div:hover,
+.player-card:hover {
+    border-color: var(--gold-dim);
+}
+
+.player-name {
+    font-family: 'Cinzel', serif;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: .05em;
+}
+
+.player-status {
+    font-family: 'Cinzel', serif;
+    font-size: .65rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.status-ready {
+    background: rgba(76, 175, 125, .15);
+    color: var(--green);
+    border: 1px solid rgba(76, 175, 125, .3);
+}
+
+.status-waiting {
+    background: rgba(224, 184, 76, .12);
+    color: var(--yellow);
+    border: 1px solid rgba(224, 184, 76, .25);
+}
+
+/* ── WAITING MESSAGE ── */
+.waiting-message {
+    margin: 8px 0 20px;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    font-size: .9rem;
+    color: var(--muted);
+    letter-spacing: .02em;
+}
+
+/* ── BUTTONS ── */
+#ready-button {
+    margin-bottom: 12px;
+}
+
+.game-button,
+#ready-button button {
+    display: inline-block;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #b8922e, var(--gold));
+    color: #0d0d12;
+    font-family: 'Cinzel', serif;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(201, 168, 76, .25);
+    transition: background .2s, box-shadow .2s, transform .1s;
+}
+
+.game-button:hover,
+#ready-button button:hover {
+    background: linear-gradient(135deg, var(--gold), #e8d590);
+    box-shadow: 0 6px 20px rgba(201, 168, 76, .4);
+}
+
+.game-button:active,
+#ready-button button:active {
+    transform: scale(.97);
+}
+
+.game-button:disabled,
+#ready-button button:disabled {
+    background: var(--border);
+    color: var(--muted);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* back-to-home link — secondary style */
+.back-link {
+    margin-top: 20px;
+}
+
+.back-link .game-button {
+    background: var(--card);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    box-shadow: none;
+    font-size: .7rem;
+}
+
+.back-link .game-button:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: rgba(201, 168, 76, .06);
+    box-shadow: none;
+}
+
+/* ── ERROR ── */
+.error-message {
+    color: var(--red);
+    font-size: .85rem;
+    margin-top: 10px;
+}
+
+/* ── ANIMATION ── */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Highlighted ready state for player card */
+.player-card.player-ready {
+    border-color: var(--gold-dim);
+    background: linear-gradient(135deg, rgba(201, 168, 76, .1), rgba(201, 168, 76, .04));
+    box-shadow: 0 0 0 1px var(--gold-dim), inset 0 0 20px rgba(201, 168, 76, .05);
+}
+
+.player-card.player-ready .player-name {
+    color: var(--gold);
+}
+
+/* Disabled/locked-in button state */
+.game-button:disabled,
+#ready-button button:disabled {
+    background: rgba(201, 168, 76, .15);
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+    box-shadow: none;
+    cursor: default;
+    opacity: 1;
+    /* override any browser dimming */
+}
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 520px) {
+
+    html,
+    body {
+        align-items: flex-start;
+        font-size: 18px;
+        /* bump the base — everything em/rem scales up with it */
+    }
+
+    .container {
+        max-width: 100%;
+        width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        padding: 52px 28px 48px;
+        box-shadow: none;
+    }
+
+    h1 {
+        font-size: 2rem;
+        /* fixed, no clamp — clamp was capping it too small */
+        margin-bottom: 24px;
+    }
+
+    .lobby-eyebrow {
+        font-size: .85rem;
+        letter-spacing: .25em;
+    }
+
+    .lobby-divider {
+        margin: 0 0 32px;
+    }
+
+    .player-count {
+        font-size: .85rem;
+        margin-bottom: 20px;
+    }
+
+    #players {
+        gap: 14px;
+        margin-bottom: 28px;
+    }
+
+    #players>div,
+    .player-card {
+        padding: 18px 20px;
+        border-radius: 12px;
+    }
+
+    .player-name {
+        font-size: 1rem;
+    }
+
+    .player-status {
+        font-size: .75rem;
+        padding: 6px 14px;
+    }
+
+    .waiting-message {
+        font-size: 1rem;
+        padding: 18px 20px;
+        margin-bottom: 28px;
+    }
+
+    #ready-button {
+        margin-bottom: 16px;
+    }
+
+    .game-button,
+    #ready-button button {
+        display: block;
+        width: 100%;
+        padding: 20px;
+        font-size: .9rem;
+        border-radius: 10px;
+    }
+
+    .back-link {
+        margin-top: 24px;
+    }
+
+    .back-link .game-button {
+        font-size: .82rem;
+        padding: 16px;
+    }
+}

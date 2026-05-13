@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "set-game-project"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^5.2.8"
+channels = "^4.1.0"
+channels-redis = "^4.2.0"
+gunicorn = "^23.0.0"
+daphne = "^4.1.2"
+python-dotenv = "^1.1.0"
+uvloop = "^0.21.0"
+pydantic = "^2.11.7"
+psycopg2-binary = "^2.9.12"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+pytest-django = "^4.8.0"
+pytest-asyncio = "^0.23.7"
+django-webtest = "^1.9.12"
+ruff = "^0.11.4"
+mypy = "^1.15.0"
+django-stubs = "^5.1.3"
+djangorestframework-stubs = "^3.15.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

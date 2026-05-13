@@ -1,0 +1,90 @@
+{% load static %}
+<div id="lobby-id" data-lobby-id="{{ lobby_id }}"></div>
+<div id="current-username" data-lobby-id="{{ current_username }}"></div>
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SET — Board Game Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'set_game/css/game.css' %}">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header info bar -->
+    <div id="game-info">
+        <div id="sets-counter">
+            Sets: <span id="sets-found">0</span> / <span id="target-sets">—</span>
+        </div>
+        <div id="timer">
+            Time: <span id="elapsed-time">0:00</span>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">
+            <span class="theme-toggle-icon">☀︎</span>
+            <span class="theme-toggle-label">Light</span>
+        </button>
+    </div>
+
+    <!-- Scores -->
+    <div id="scores"></div>
+
+    <!-- Board -->
+    <div id="game-container">
+        <div id="game-board"></div>
+    </div>
+
+    <!-- Message -->
+    <p id="message"></p>
+
+    <!-- Rematch -->
+    <div id="rematch-container" style="display: none;">
+        <button id="rematch-button" class="game-button">Request Rematch</button>
+        <p id="rematch-status">Waiting for other players...</p>
+    </div>
+
+    <!-- Back to home -->
+    <a href="{% url 'home:home' %}" class="game-button">← Back to Home</a>
+
+</div>
+
+<script>
+    window.setGameData = {
+        gameStateId: "{{ game_state.id }}",
+        username:    "{{ current_username }}",
+        lobbyId:     "{{ lobby_id }}",
+    };
+
+    // Theme toggle — persists preference in localStorage
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    const icon = btn.querySelector('.theme-toggle-icon');
+    const label = btn.querySelector('.theme-toggle-label');
+
+    const saved = localStorage.getItem('set-theme') || 'dark';
+    html.setAttribute('data-theme', saved);
+    updateToggle(saved);
+
+    btn.addEventListener('click', () => {
+        const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('set-theme', next);
+        updateToggle(next);
+    });
+
+    function updateToggle(theme) {
+        if (theme === 'dark') {
+            icon.textContent = '☀︎';
+            label.textContent = 'Light';
+        } else {
+            icon.textContent = '☽';
+            label.textContent = 'Dark';
+        }
+    }
+</script>
+<script src="{% static 'set_game/js/game.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <defs>
+        <pattern id="stripes" patternUnits="userSpaceOnUse" width="7" height="10" patternTransform="rotate(58)">
+            <line x1="0" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="4" stroke-opacity="0.9"/>
+        </pattern>
+    </defs>
+    <polygon 
+        points="50,22 95,50 50,78 5,50" 
+        fill="url(#stripes)" 
+        stroke="currentColor" 
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-opacity="0.9"
+    />
+</svg>

@@ -1,0 +1,24 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Head -->
+  <ellipse cx="100" cy="80" rx="12" ry="10" fill="#4a1a5c"/>
+  
+  <!-- Body/Elytra -->
+  <ellipse cx="100" cy="115" rx="25" ry="40" fill="#5c2a7a"/>
+  
+  <!-- Wing case split line -->
+  <line x1="100" y1="80" x2="100" y2="155" stroke="#1a1a1a" stroke-width="2"/>
+  
+  <!-- Antennae -->
+  <path d="M 95 75 Q 85 65 80 60" stroke="#2c2c2c" stroke-width="2" fill="none"/>
+  <path d="M 105 75 Q 115 65 120 60" stroke="#2c2c2c" stroke-width="2" fill="none"/>
+  
+  <!-- Left Legs (3 legs) -->
+  <path d="M 85 95 Q 65 95 55 100" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 80 115 Q 60 120 50 130" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 85 135 Q 65 145 55 155" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Right Legs (3 legs) -->
+  <path d="M 115 95 Q 135 95 145 100" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 120 115 Q 140 120 150 130" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 115 135 Q 135 145 145 155" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+</svg>

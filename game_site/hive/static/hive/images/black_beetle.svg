@@ -1,0 +1,29 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  
+  <!-- Head -->
+  <ellipse cx="100" cy="80" rx="12" ry="10" fill="#d4b3e6" stroke="#b899d9" stroke-width="1"/>
+  
+  <!-- Body/Elytra -->
+  <ellipse cx="100" cy="115" rx="25" ry="40" fill="#e6d0f5" stroke="#b899d9" stroke-width="1"/>
+  
+  <!-- Wing case split line -->
+  <line x1="100" y1="80" x2="100" y2="155" stroke="#dddddd" stroke-width="2"/>
+  
+  <!-- Antennae -->
+  <path d="M 95 75 Q 85 65 80 60" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 105 75 Q 115 65 120 60" stroke="#ffffff" stroke-width="2" fill="none"/>
+  
+  <!-- Left Legs (3 legs) -->
+  <path d="M 85 95 Q 65 95 55 100" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+  <path d="M 80 115 Q 60 120 50 130" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+  <path d="M 85 135 Q 65 145 55 155" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+  
+  <!-- Right Legs (3 legs) -->
+  <path d="M 115 95 Q 135 95 145 100" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+  <path d="M 120 115 Q 140 120 150 130" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+  <path d="M 115 135 Q 135 145 145 155" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+  
+  <!-- Eyes -->
+  <circle cx="96" cy="78" r="2" fill="#2c2c2c"/>
+  <circle cx="104" cy="78" r="2" fill="#2c2c2c"/>
+</svg>

@@ -1,0 +1,25 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Body -->
+  <ellipse cx="100" cy="120" rx="25" ry="35" fill="#2c2c2c"/>
+  
+  <!-- Head -->
+  <circle cx="100" cy="75" r="20" fill="#2c2c2c"/>
+  
+  <!-- Eyes -->
+  <circle cx="92" cy="70" r="4" fill="#ffffff"/>
+  <circle cx="108" cy="70" r="4" fill="#ffffff"/>
+  <circle cx="92" cy="70" r="2" fill="#000000"/>
+  <circle cx="108" cy="70" r="2" fill="#000000"/>
+  
+  <!-- Left legs -->
+  <path d="M 75 100 Q 40 80 30 90" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  <path d="M 75 110 Q 35 100 25 115" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  <path d="M 75 120 Q 35 130 25 145" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  <path d="M 80 135 Q 45 150 35 165" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  
+  <!-- Right legs -->
+  <path d="M 125 100 Q 160 80 170 90" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  <path d="M 125 110 Q 165 100 175 115" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  <path d="M 125 120 Q 165 130 175 145" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+  <path d="M 120 135 Q 155 150 165 165" stroke="#2c2c2c" stroke-width="3" fill="none"/>
+</svg>

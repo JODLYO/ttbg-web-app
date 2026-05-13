@@ -1,0 +1,30 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Head -->
+  <circle cx="100" cy="65" r="15" fill="#1a3a5c"/>
+  
+  <!-- Thorax -->
+  <ellipse cx="100" cy="95" rx="12" ry="18" fill="#1a3a5c"/>
+  
+  <!-- Abdomen (large oval) -->
+  <ellipse cx="100" cy="135" rx="22" ry="30" fill="#2c4f7c"/>
+  
+  <!-- Antennae (bent) -->
+  <path d="M 92 55 Q 82 45 75 35" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 108 55 Q 118 45 125 35" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Front legs -->
+  <path d="M 90 85 Q 70 75 60 70" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 110 85 Q 130 75 140 70" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Middle legs -->
+  <path d="M 88 95 Q 65 95 55 100" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 112 95 Q 135 95 145 100" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Back legs -->
+  <path d="M 90 105 Q 70 115 60 125" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 110 105 Q 130 115 140 125" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  
+  <!-- Eyes -->
+  <circle cx="95" cy="63" r="2.5" fill="#4a4a4a"/>
+  <circle cx="105" cy="63" r="2.5" fill="#4a4a4a"/>
+</svg>

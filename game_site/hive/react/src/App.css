@@ -1,0 +1,262 @@
+/* --- Responsive scaling variables --- */
+body {
+  display: block;
+  /* display: flex;
+  justify-content: center;
+  align-items: flex-start; */
+}
+
+:root {
+  --u: min(1.2vw, 1.2vh);
+
+  --font-sm: clamp(0.6rem, 1.4 * var(--u), 1.2rem);
+  --font-md: clamp(0.8rem, 2 * var(--u), 1.6rem);
+  --font-lg: clamp(1.2rem, 3 * var(--u), 2.4rem);
+
+  /* hex size for hand pieces */
+  --hex-size: clamp(28px, 6 * var(--u), 90px);
+
+  --pad: clamp(4px, 1.5 * var(--u), 20px);
+}
+
+/* --- Global --- */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-size: var(--font-md);
+  font-family: sans-serif;
+}
+
+/* --- Layout Grid --- */
+.hive-root {
+  height: 100vh;
+  width: 100%;
+  display: grid;
+  max-width: 1100px;
+  /* NEW — choose any max width */
+  margin: 0 auto;
+  /* NEW — centers the whole layout */
+  grid-template-rows: auto 1fr auto;
+
+  gap: var(--pad);
+  padding: var(--pad);
+  justify-items: center;
+}
+
+.hive-section {
+  text-align: center;
+  width: 100%;
+  padding: var(--pad) 0;
+  border-bottom: 1px solid #ccc;
+}
+
+.hive-section.board {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.hive-board-origin {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+.hive-section.board>div {
+  /* width: 100vw;
+  height: 100vh; */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: auto;
+  /* z-index: 1; */
+}
+
+/* .hive-board-wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+} */
+
+.hive-hand {
+  position: relative;
+  z-index: 20;
+  /* hand sits above the board */
+  pointer-events: auto;
+  /* allow dragging */
+}
+
+.hive-board-wrapper {
+  position: relative;
+  /* width: 600px; */
+  width: auto;
+  /* pick any */
+  height: auto;
+  /* symmetric square */
+  pointer-events: auto;
+  z-index: auto;
+}
+
+.hive-board-wrapper>div {
+  pointer-events: none;
+}
+
+.hive-board-wrapper>div .hex-piece {
+  pointer-events: auto;
+  /* if you want board hexes to be clickable */
+}
+
+h1 {
+  font-size: var(--font-lg);
+  margin: 0;
+}
+
+h2 {
+  font-size: var(--font-md);
+  margin: 0;
+}
+
+.pieces-title {
+  font-size: var(--font-sm);
+  margin-bottom: calc(var(--pad) * 0.5);
+  font-weight: bold;
+}
+
+/* --- Pieces in Hand rows --- */
+.pieces-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--pad) * 0.6);
+  justify-content: center;
+}
+
+/* --- Our new responsive HexCell container --- */
+.hex-piece {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* --- Old board hex styles remain untouched --- */
+.hex {
+  width: 100%;
+  aspect-ratio: 1 / 0.866;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.12em solid #333;
+  background: var(--hex-color, #f8e38a);
+  font-weight: bold;
+}
+
+.hex::before,
+.hex::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  padding-bottom: 28.87%;
+  background: inherit;
+  border-left: inherit;
+  border-right: inherit;
+}
+
+.hex::before {
+  top: -28.87%;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.hex::after {
+  bottom: -28.87%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+/* --- Piece colors --- */
+.hex.queen {
+  --hex-color: #ff9f9f;
+}
+
+.hex.ant {
+  --hex-color: #fff;
+}
+
+.hex.spider {
+  --hex-color: #d7a4ff;
+}
+
+.hex.beetle {
+  --hex-color: #b8b8ff;
+}
+
+.hex.grasshopper {
+  --hex-color: #a6e27b;
+}
+
+.hive-board-viewport {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.turn-active {
+  border: 2px solid gold;
+  border-radius: 10px;
+  padding: calc(var(--pad) * 0.5);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  animation: turnPulse 1.6s infinite ease-in-out;
+}
+
+.game-over-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+
+.game-over-popup > div {
+  background: #111;
+  padding: 3rem 4rem;
+  border-radius: 16px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 0 30px gold;
+  animation: popIn 0.4s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.hive-section.you {
+  /* Remove the style={{ zIndex: 100 }} from the JSX too */
+  padding: var(--pad) 0;
+}
+
+/* And make sure both sections have consistent styling */
+.hive-section.opponent,
+.hive-section.you {
+  text-align: center;
+  width: 100%;
+  padding: var(--pad) 0;
+  border-bottom: 1px solid #ccc;
+}

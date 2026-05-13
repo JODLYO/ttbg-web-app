@@ -1,0 +1,83 @@
+{% load static %}
+<div id="lobby-id" data-lobby-id="{{ lobby_id }}"></div>
+<div id="current-username" data-username="{{ current_username }}"></div>
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SET — Single Player</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'set_game/css/game.css' %}">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header info bar -->
+    <div id="game-info">
+        <div id="sets-counter">
+            Sets: <span id="sets-found">0</span> / <span id="target-sets">10</span>
+        </div>
+        <div id="timer">
+            Time: <span id="elapsed-time">0:00</span>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">
+            <span class="theme-toggle-icon">☀︎</span>
+            <span class="theme-toggle-label">Light</span>
+        </button>
+    </div>
+
+    <!-- Board -->
+    <div id="game-container">
+        <div id="game-board"></div>
+    </div>
+
+    <!-- Message -->
+    <p id="message"></p>
+
+    <!-- Game Over -->
+    <div id="game-over-container" style="display: none;">
+        <h2>Game Over!</h2>
+        <p>You found all the sets in <span id="final-time">0:00</span>!</p>
+        <a href="{% url 'home:home' %}" class="game-button" style="margin-top: 1.5rem;">← Back to Home</a>
+    </div>
+
+    <!-- Back to Home -->
+    <a href="{% url 'home:home' %}" class="game-button">← Back to Home</a>
+
+</div>
+
+<script>
+    window.setGameData = {
+        gameStateId: "single_player_{{ lobby_id }}",
+        username:    "{{ current_username }}",
+        lobbyId:     "{{ lobby_id }}",
+    };
+
+    // Theme toggle — shared localStorage key with multiplayer
+    const html = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    const icon = btn.querySelector('.theme-toggle-icon');
+    const label = btn.querySelector('.theme-toggle-label');
+
+    const saved = localStorage.getItem('set-theme') || 'dark';
+    html.setAttribute('data-theme', saved);
+    updateToggle(saved);
+
+    btn.addEventListener('click', () => {
+        const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('set-theme', next);
+        updateToggle(next);
+    });
+
+    function updateToggle(theme) {
+        icon.textContent = theme === 'dark' ? '☀︎' : '☽';
+        label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+    }
+</script>
+<script src="{% static 'set_game/js/single_player_game.js' %}"></script>
+</body>
+</html>

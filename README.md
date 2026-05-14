@@ -35,14 +35,25 @@ DB_PASSWORD=your-db-password
 
 ### Running Locally (without Docker)
 
-Requires a running PostgreSQL instance with the credentials from your `.env` file.
+1. Install and start PostgreSQL 16 (via your system's package manager or [postgresql.org](https://www.postgresql.org/download/)).
 
-1. Install dependencies:
+2. Create the database and user:
+    ```bash
+    psql postgres
+    ```
+    ```sql
+    CREATE DATABASE board_game_db;
+    CREATE USER board_game_user WITH PASSWORD 'your-db-password';
+    ALTER DATABASE board_game_db OWNER TO board_game_user;
+    \q
+    ```
+
+3. Install dependencies:
     ```bash
     poetry install
     ```
 
-2. Update `settings.py` for local development:
+4. Update `settings.py` for local development:
     ```python
     DEBUG = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -51,12 +62,13 @@ Requires a running PostgreSQL instance with the credentials from your `.env` fil
     CSRF_COOKIE_SECURE = False
     ```
 
-3. Start the development server from `board_game_site/game_site`:
+5. Run migrations and start the server from `board_game_site/game_site`:
     ```bash
+    python manage.py migrate
     python manage.py runserver
     ```
 
-4. Visit [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
+6. Visit [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
 ### Running Tests
 

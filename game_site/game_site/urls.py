@@ -25,4 +25,5 @@ urlpatterns = [
     ),
     path("set-game/", include("set_game.urls", namespace="set-game")),
     path("hive/", include("hive.urls", namespace="hive")),
+    path("aiedit/", include("aiedit.urls", namespace="aiedit")),
 ]

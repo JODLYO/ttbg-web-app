@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "set_game",
     "dragon_in_the_forest",
     "hive",
+    "aiedit",
 ]
 
 MIDDLEWARE = [
@@ -121,6 +122,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "set_game/static"),
     os.path.join(BASE_DIR, "dragon_in_the_forest/static"),
     os.path.join(BASE_DIR, "hive/static"),
+    os.path.join(BASE_DIR, "aiedit/static"),
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

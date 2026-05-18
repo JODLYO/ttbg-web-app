@@ -1,0 +1,240 @@
+/* ── Upload phase ── */
+#phase-upload {
+  width: 100%;
+}
+
+#phase-upload h3 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+#phase-upload > p {
+  font-size: .9rem;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+/* ── File upload zone ── */
+.upload-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.upload-zone input[type="file"] {
+  display: none;
+}
+
+.upload-zone label {
+  display: inline-block;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: .78rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  color: var(--gold);
+  background: transparent;
+  transition: background .2s, border-color .2s, color .2s;
+}
+
+.upload-zone label:hover {
+  background: rgba(201, 168, 76, .08);
+  border-color: var(--gold);
+}
+
+.upload-zone label.file-chosen {
+  border-color: var(--teal-dim);
+  color: var(--teal);
+}
+
+.upload-zone label.file-chosen:hover {
+  background: rgba(45, 212, 191, .08);
+  border-color: var(--teal);
+}
+
+/* ── Style grid ── */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.grid-item { position: relative; }
+
+.grid-item a .check {
+  opacity: 0;
+  z-index: 9;
+  transition: opacity .25s ease;
+  position: absolute;
+  transform: translate(75%, 100%);
+}
+
+.grid-item a:hover .check { opacity: 1; }
+.grid-item a.active .check { opacity: 1; }
+
+.check img { background-color: transparent; }
+
+img.style {
+  object-fit: contain;
+  width: 100%;
+  height: 180px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: #000;
+  display: block;
+  transition: border-color .2s;
+}
+
+.grid-item a:hover img.style   { border-color: var(--gold-dim); }
+.grid-item a.active img.style  { border-color: var(--gold); }
+
+/* ── Process button ── */
+.next-step {
+  display: none;
+  margin-top: 24px;
+}
+
+.next-step button {
+  font-family: 'Cinzel', serif;
+  font-size: .8rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  padding: 12px 28px;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
+}
+
+.next-step button:hover {
+  background: rgba(201, 168, 76, .1);
+  border-color: var(--gold);
+}
+
+/* ── Processing phase ── */
+#phase-processing {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 0;
+}
+
+#progress-text {
+  font-size: .9rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+#progress-bar {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  border-radius: 3px;
+  overflow: hidden;
+  border: none;
+  background: var(--border);
+}
+
+#progress-bar::-webkit-progress-bar   { background: var(--border); }
+#progress-bar::-webkit-progress-value { background: var(--gold); border-radius: 3px; }
+#progress-bar::-moz-progress-bar      { background: var(--gold); border-radius: 3px; }
+
+/* ── About page ── */
+.about-explainer {
+  margin-top: 32px;
+  max-width: 700px;
+}
+
+.about-youtube-link {
+  display: inline-block;
+  position: relative;
+}
+
+.about-youtube-thumb {
+  max-width: 100%;
+  width: 560px;
+  display: block;
+  border-radius: 6px;
+}
+
+.about-youtube-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── About/home grid ── */
+.home-grid-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 10px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.home-grid-item {
+  text-align: center;
+  padding: 10px;
+  color: var(--text);
+  min-width: 0;
+}
+
+.home-grid-item img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+
+/* ── General ── */
+img {
+  object-fit: contain;
+  background-color: #000;
+}
+
+h1 { margin: 0; font-size: 24px; }
+
+h3 { font-size: 16px; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .grid-container {
+    grid-template-columns: 1fr;
+  }
+
+  img.style {
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .next-step {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 16px 24px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .next-step button {
+    width: 100%;
+  }
+}

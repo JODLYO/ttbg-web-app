@@ -1,0 +1,219 @@
+.container_canvas {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+section {
+  border-radius: 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* ── Tools sidebar ── */
+.tools-board {
+  width: 210px;
+  flex-shrink: 0;
+  padding: 15px 15px 0;
+}
+
+.tools-board .row {
+  margin-bottom: 20px;
+}
+
+.row .title {
+  font-family: 'Cinzel', serif;
+  font-size: .7rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.row .options {
+  padding-left: 0;
+  list-style: none;
+  margin: 10px 0 0 5px;
+}
+
+.row .options .option {
+  display: flex;
+  user-select: none;
+  cursor: pointer;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.option img {
+  filter: brightness(0) invert(1) opacity(.45);
+  background-color: transparent;
+  width: 18px;
+  height: 18px;
+}
+
+.option:is(:hover,.active) img {
+  filter: brightness(0) invert(1);
+  background-color: transparent;
+}
+
+.option :where(span,label) {
+  color: var(--muted);
+  cursor: pointer;
+  padding-left: 10px;
+  font-size: .85rem;
+}
+
+.option:is(:hover,.active) :where(span,label) {
+  color: var(--gold);
+}
+
+.option #size-slider {
+  width: 100%;
+  height: 5px;
+  margin-top: 10px;
+  accent-color: var(--gold);
+}
+
+/* ── Buttons ── */
+.buttons button {
+  width: 100%;
+  border: none;
+  outline: none;
+  padding: 10px 0;
+  font-family: 'Cinzel', serif;
+  font-size: .72rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
+}
+
+.buttons .clear-canvas {
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.buttons .clear-canvas:hover {
+  color: var(--text);
+  border-color: var(--gold-dim);
+}
+
+.buttons .save-img {
+  color: var(--gold);
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+}
+
+.buttons .save-img:hover {
+  background: rgba(201,168,76,.1);
+  border-color: var(--gold);
+}
+
+/* ── Draw style grid inside tools ── */
+#draw-style-grid {
+  grid-template-columns: auto auto auto;
+  justify-content: start;
+  background: transparent;
+  border: none;
+  padding: 0;
+  gap: 6px;
+}
+
+#draw-style-grid .grid-item a .check {
+  opacity: 1;
+  position: static;
+  transform: none;
+}
+
+#draw-style-grid .grid-item.selected a .check img {
+  border: 2px solid var(--gold);
+}
+
+.check img {
+  border: 1px solid var(--border);
+  object-fit: contain;
+  width: 50px;
+  height: 50px;
+  border-radius: 3px;
+  display: block;
+}
+
+/* ── Drawing board ── */
+.drawing-board {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.drawing-board canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  cursor: crosshair;
+}
+
+/* ── Video controls ── */
+.video-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 4px 0;
+}
+
+.video-controls button {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  transition: color .2s, border-color .2s;
+}
+
+.video-controls button:hover {
+  color: var(--text);
+  border-color: var(--gold-dim);
+}
+
+#frame-counter  { font-size: 0.8rem;  color: var(--muted); }
+#time-estimate  { font-size: 0.85rem; color: var(--muted); margin: 8px 0 16px; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .container_canvas {
+    flex-direction: column-reverse;
+    gap: 0;
+  }
+
+  .tools-board {
+    width: 100%;
+    padding: 12px;
+    border-radius: 0 0 7px 7px;
+    border-top: 1px solid var(--border);
+  }
+
+  .drawing-board {
+    width: 100%;
+    border-radius: 7px 7px 0 0;
+  }
+
+  .drawing-board canvas {
+    width: 100%;
+    height: auto;
+    touch-action: none;
+  }
+
+  /* Compact tool rows side by side on mobile */
+  .row.styles { order: -1; }
+
+  #draw-style-grid {
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  }
+}

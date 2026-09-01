@@ -29,11 +29,13 @@ export default function HiveBoardSVG({
   gameState,
   hoverHex,
   onDropPiece,
+  onHoverHexChange,
   playerColors,
 }: {
   gameState: HiveGameState;
   hoverHex: HivePosition | null;
   onDropPiece?: (piece: HivePieceState, pos: HivePosition) => void;
+  onHoverHexChange?: (hex: HivePosition | null) => void;
   playerColors: Record<string, string>;
 }) {
   const cellMap = gameState.board_state.cells;
@@ -80,10 +82,15 @@ export default function HiveBoardSVG({
     };
 
     updateHexSize();
-    
-    // Update on window resize
-    window.addEventListener('resize', updateHexSize);
-    return () => window.removeEventListener('resize', updateHexSize);
+
+    // Re-measure whenever the board's actual rendered size changes - not just on
+    // window resize. The board sits in a CSS grid row sized off its siblings'
+    // "auto" heights, which can shift after mount (e.g. web fonts finishing load),
+    // so a resize-only listener can permanently lock in a too-small size measured
+    // before layout settled.
+    const observer = new ResizeObserver(updateHexSize);
+    observer.observe(boardRef.current);
+    return () => observer.disconnect();
   }, []);
 
   /* =========================
@@ -124,16 +131,24 @@ export default function HiveBoardSVG({
     const handler = (e: PointerEvent) => {
       if (!boardRef.current) return;
 
+      const rect = boardRef.current.getBoundingClientRect();
+      const withinBoard =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
       const { x, y } = screenToBoard(e.clientX, e.clientY, boardRef.current, camera);
-      const hex = boardToHex(x, y, hexPositions, hexRadius);
+      const hex = withinBoard ? boardToHex(x, y, hexPositions, hexRadius) : null;
 
       setHoveredHex(hex);
       setPointer({ x, y });
+      onHoverHexChange?.(hex);
     };
 
     document.addEventListener("pointermove", handler);
     return () => document.removeEventListener("pointermove", handler);
-  }, [camera, hexPositions, hexRadius]);
+  }, [camera, hexPositions, hexRadius, onHoverHexChange]);
 
   /* =========================
      Drop logic
@@ -189,6 +204,7 @@ export default function HiveBoardSVG({
           return (
             <div
               key={key}
+              data-hex={key}
               style={{
                 position: "absolute",
                 left: x - half,

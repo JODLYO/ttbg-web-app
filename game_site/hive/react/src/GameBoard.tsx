@@ -3,7 +3,6 @@ import type { HiveGameState, HivePieceState, HivePosition } from "./types";
 import HiveBoardSVG from "./HiveBoardSVG";
 import { HexCell3D } from "./HexCells";
 import Draggable from "react-draggable";
-import { nodeCenterRelativeToBoard, findClosestHex, isNodeOverBoard, computeBoardCells } from "./utils"
 
 export default function GameBoard() {
   const socketRef = useRef<WebSocket | null>(null);
@@ -70,11 +69,6 @@ export default function GameBoard() {
 
   if (!gameState) return <div>Loading Hive board...</div>;
 
-  const cells = Object.values(gameState.board_state.cells);
-  // const radius = computeBoardRadius(cells);
-  // const hexes = generateHexGrid(radius);
-  const hexes = computeBoardCells(cells)
-
   const p1 = gameState.player1_state;
   const p2 = gameState.player2_state;
   const you = p1.username === username ? p1 : p2;
@@ -85,45 +79,11 @@ export default function GameBoard() {
     [p2.username]: "black",
   };
 
-  function handleHandDrag(node: HTMLElement | null) {
-    const board = document.querySelector<HTMLElement>(".hive-board-wrapper");
-    if (!board || !node) {
-      setHoverHex(null);
-      return;
-    }
-
-    if (!isNodeOverBoard(board, node)) {
-      setHoverHex(null);
-      return;
-    }
-
-    const { x, y } = nodeCenterRelativeToBoard(board, node);
-    setHoverHex(findClosestHex(x, y, hexes, 20));
-  }
-
   function handleHandDrop(piece: HivePieceState) {
     if (!hoverHex) return;
     sendMove(piece, hoverHex);
     setHoverHex(null);
   }
-  // function handleHandDrop(piece: HivePieceState, node: HTMLElement) {
-  //   if (!hoverHex) return;
-  //   const board = document.querySelector<HTMLElement>(".hive-board-wrapper");
-  //   if (!board) return;
-  //   setHoverHex(null);
-
-  //   const { x, y } = nodeCenterRelativeToBoard(board, node);
-
-  //   const cells = Object.values(gameState!.board_state.cells);
-  //   const radius = computeBoardRadius(cells);
-  //   const hexes = generateHexGrid(radius);
-
-  //   const closest = findClosestHex(x, y, hexes, 20);
-
-  //   if (closest) {
-  //     sendMove(piece, closest);
-  //   }
-  // }
 
   return (
     <>
@@ -155,7 +115,7 @@ export default function GameBoard() {
         <HiveBoardSVG
           gameState={gameState}
           hoverHex={hoverHex}
-          // onDragPiece={handleHandDrag}
+          onHoverHexChange={setHoverHex}
           onDropPiece={sendMove}
           playerColors={playerColors}
         />
@@ -171,7 +131,6 @@ export default function GameBoard() {
           pieces={you.pieces_in_hand}
           colour={playerColors[you.username]}
           title="Your pieces in hand"
-          onDrag={handleHandDrag}
           onDrop={handleHandDrop}
         />
       </section>
@@ -187,13 +146,11 @@ function PiecesStrip({
   colour,
   title,
   onDrop,
-  onDrag,
 }: {
   pieces: HivePieceState[];
   colour: string;
   title: string;
   onDrop?: (piece: HivePieceState, node: HTMLElement) => void;
-  onDrag?: (node: HTMLElement | null) => void;
 }) {
   return (
     <div className="pieces-block">
@@ -205,7 +162,6 @@ function PiecesStrip({
             piece={p}
             colour={colour}
             onDrop={onDrop}
-            onDrag={onDrag}
           />
         ))}
       </div>
@@ -217,12 +173,10 @@ function DraggableHandPiece({
   piece,
   colour,
   onDrop,
-  onDrag,
 }: {
   piece: HivePieceState;
   colour: string;
   onDrop?: (piece: HivePieceState, node: HTMLElement) => void;
-  onDrag?: (node: HTMLElement | null) => void;
 }) {
   const nodeRef = useRef<HTMLDivElement>(null);
 
@@ -231,7 +185,6 @@ function DraggableHandPiece({
       nodeRef={nodeRef}
       position={{ x: 0, y: 0 }}
       bounds="body"
-      onDrag={() => onDrag?.(nodeRef.current)}
       onStop={() => {
         if (nodeRef.current) {
           onDrop?.(piece, nodeRef.current);

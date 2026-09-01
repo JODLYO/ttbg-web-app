@@ -13232,17 +13232,6 @@ function computeBoardCells(cells) {
   return [...set.values()];
 }
 __name(computeBoardCells, "computeBoardCells");
-function nodeCenterRelativeToBoard(board, node) {
-  const boardRect = board.getBoundingClientRect();
-  const nodeRect = node.getBoundingClientRect();
-  const centerX = nodeRect.left + nodeRect.width / 2;
-  const centerY = nodeRect.top + nodeRect.height / 2;
-  return {
-    x: centerX - boardRect.left - boardRect.width / 2,
-    y: centerY - boardRect.top - boardRect.height / 2
-  };
-}
-__name(nodeCenterRelativeToBoard, "nodeCenterRelativeToBoard");
 function findClosestHex(x, y, hexes, size) {
   let closest = null;
   let minDist = Infinity;
@@ -13257,12 +13246,6 @@ function findClosestHex(x, y, hexes, size) {
   return closest;
 }
 __name(findClosestHex, "findClosestHex");
-function isNodeOverBoard(board, node) {
-  const b = board.getBoundingClientRect();
-  const n = node.getBoundingClientRect();
-  return !(n.right < b.left || n.left > b.right || n.bottom < b.top || n.top > b.bottom);
-}
-__name(isNodeOverBoard, "isNodeOverBoard");
 function screenToBoard(clientX, clientY, boardEl, camera) {
   const rect = boardEl.getBoundingClientRect();
   const x = (clientX - rect.left - rect.width / 2 - camera.x) / camera.scale;
@@ -13278,6 +13261,7 @@ function HiveBoardSVG({
   gameState,
   hoverHex,
   onDropPiece,
+  onHoverHexChange,
   playerColors
 }) {
   const cellMap = gameState.board_state.cells;
@@ -13300,8 +13284,9 @@ function HiveBoardSVG({
       setHexRadius(boundedRadius);
     }, "updateHexSize");
     updateHexSize();
-    window.addEventListener("resize", updateHexSize);
-    return () => window.removeEventListener("resize", updateHexSize);
+    const observer = new ResizeObserver(updateHexSize);
+    observer.observe(boardRef.current);
+    return () => observer.disconnect();
   }, []);
   reactExports.useEffect(() => {
     if (!boardRef.current || hexRadius === 0) return;
@@ -13324,14 +13309,17 @@ function HiveBoardSVG({
   reactExports.useEffect(() => {
     const handler = /* @__PURE__ */ __name((e) => {
       if (!boardRef.current) return;
+      const rect = boardRef.current.getBoundingClientRect();
+      const withinBoard = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
       const { x, y } = screenToBoard(e.clientX, e.clientY, boardRef.current, camera);
-      const hex = boardToHex(x, y, hexPositions, hexRadius);
+      const hex = withinBoard ? boardToHex(x, y, hexPositions, hexRadius) : null;
       setHoveredHex(hex);
       setPointer({ x, y });
+      onHoverHexChange?.(hex);
     }, "handler");
     document.addEventListener("pointermove", handler);
     return () => document.removeEventListener("pointermove", handler);
-  }, [camera, hexPositions, hexRadius]);
+  }, [camera, hexPositions, hexRadius, onHoverHexChange]);
   function dropPiece() {
     if (!draggingPiece || !pointer) return;
     const hex = boardToHex(pointer.x, pointer.y, hexPositions, hexRadius);
@@ -13373,6 +13361,7 @@ function HiveBoardSVG({
               return /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
+                  "data-hex": key,
                   style: {
                     position: "absolute",
                     left: x - half,
@@ -14852,8 +14841,6 @@ function GameBoard() {
     return () => window.removeEventListener("pageshow", pageshowHandler);
   }, []);
   if (!gameState) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Loading Hive board..." });
-  const cells = Object.values(gameState.board_state.cells);
-  const hexes = computeBoardCells(cells);
   const p1 = gameState.player1_state;
   const p2 = gameState.player2_state;
   const you = p1.username === username ? p1 : p2;
@@ -14862,20 +14849,6 @@ function GameBoard() {
     [p1.username]: "white",
     [p2.username]: "black"
   };
-  function handleHandDrag(node) {
-    const board = document.querySelector(".hive-board-wrapper");
-    if (!board || !node) {
-      setHoverHex(null);
-      return;
-    }
-    if (!isNodeOverBoard(board, node)) {
-      setHoverHex(null);
-      return;
-    }
-    const { x, y } = nodeCenterRelativeToBoard(board, node);
-    setHoverHex(findClosestHex(x, y, hexes, 20));
-  }
-  __name(handleHandDrag, "handleHandDrag");
   function handleHandDrop(piece) {
     if (!hoverHex) return;
     sendMove(piece, hoverHex);
@@ -14904,6 +14877,7 @@ function GameBoard() {
         {
           gameState,
           hoverHex,
+          onHoverHexChange: setHoverHex,
           onDropPiece: sendMove,
           playerColors
         }
@@ -14919,7 +14893,6 @@ function GameBoard() {
             pieces: you.pieces_in_hand,
             colour: playerColors[you.username],
             title: "Your pieces in hand",
-            onDrag: handleHandDrag,
             onDrop: handleHandDrop
           }
         )
@@ -14932,8 +14905,7 @@ function PiecesStrip({
   pieces,
   colour,
   title,
-  onDrop,
-  onDrag
+  onDrop
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pieces-block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pieces-title", children: title }),
@@ -14942,8 +14914,7 @@ function PiecesStrip({
       {
         piece: p,
         colour,
-        onDrop,
-        onDrag
+        onDrop
       },
       p.id
     )) })
@@ -14953,8 +14924,7 @@ __name(PiecesStrip, "PiecesStrip");
 function DraggableHandPiece({
   piece,
   colour,
-  onDrop,
-  onDrag
+  onDrop
 }) {
   const nodeRef = reactExports.useRef(null);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -14963,7 +14933,6 @@ function DraggableHandPiece({
       nodeRef,
       position: { x: 0, y: 0 },
       bounds: "body",
-      onDrag: /* @__PURE__ */ __name(() => onDrag?.(nodeRef.current), "onDrag"),
       onStop: /* @__PURE__ */ __name(() => {
         if (nodeRef.current) {
           onDrop?.(piece, nodeRef.current);
@@ -14988,4 +14957,4 @@ __name(App, "App");
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, {}) })
 );
-//# sourceMappingURL=main-XqcLWbDG.js.map
+//# sourceMappingURL=main-dOZ_JIQ7.js.map

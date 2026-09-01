@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from common.models import BaseLobby, BaseLobbyPlayer
 from .game_state import (
     HiveGameState,
@@ -20,10 +20,13 @@ from .helpers import (
     hiveboard_from_json_dict,
     is_queen_surrounded,
     rebuild_pieces_on_board,
+    candidate_placement_positions,
+    board_move_candidate_positions,
+    to_tuple,
+    _tuple_to_pos,
 )
 
 MAX_PLAYERS = 2
-TURN_NUMBER_QUEEN_MUST_BE_PLACED = 3
 
 
 class Lobby(BaseLobby):
@@ -172,35 +175,11 @@ class GameState(models.Model):
         elif any(
             p for p in player.pieces_on_board if p == piece
         ):  # piece played from board
-            temp_board = state.board_state.model_copy(deep=True)
-            assert piece.position is not None
-            del temp_board.cells[piece.position]
-            if not hive_is_connected(temp_board):
-                return False, "Hive not connected during move"
-            if (
-                not player.has_placed_queen
-                and state.turn_no == TURN_NUMBER_QUEEN_MUST_BE_PLACED
-                and piece.piece_type != HivePieceType.QUEEN
-            ):
-                return False, "You must place your Queen by your 4th turn"
-            if piece.piece_type == HivePieceType.ANT:
-                valid, path = can_slide_path(state, piece.position, new_piece_pos)
-            elif piece.piece_type == HivePieceType.QUEEN:
-                valid, path = can_slide_path(
-                    state, piece.position, new_piece_pos, max_steps=1
-                )
-            elif piece.piece_type == HivePieceType.SPIDER:
-                valid, path = can_slide_path(
-                    state,
-                    piece.position,
-                    new_piece_pos,
-                    max_steps=3,
-                    require_exact_steps=3,
-                )
-            elif piece.piece_type == HivePieceType.GRASSHOPPER:
-                valid = grasshopper_jump_valid(state, piece, new_piece_pos)
-            elif piece.piece_type == HivePieceType.BEETLE:
-                valid = beetle_move_valid(state, piece, new_piece_pos)
+            valid, message = self._board_move_valid(
+                state, player, piece, new_piece_pos
+            )
+            if not valid:
+                return valid, message
         if not valid:
             return False, "illegal piece move"
         state = self._update_state_after_move(state, player, piece, new_piece_pos)
@@ -222,6 +201,85 @@ class GameState(models.Model):
             else state.player1_state
         )
         return player, opponent
+
+    def _board_move_valid(
+        self,
+        state: HiveGameState,
+        player: HivePlayerState,
+        piece: HivePieceState,
+        new_piece_pos: HivePosition,
+    ) -> Tuple[bool, str]:
+        if not player.has_placed_queen:
+            return False, "You must place your Queen Bee before moving other pieces"
+        if piece.position is None:
+            return False, "illegal piece move"
+        temp_board = state.board_state.model_copy(deep=True)
+        del temp_board.cells[piece.position]
+        if not hive_is_connected(temp_board):
+            return False, "Hive not connected during move"
+        if piece.piece_type == HivePieceType.ANT:
+            valid, path = can_slide_path(state, piece.position, new_piece_pos)
+        elif piece.piece_type == HivePieceType.QUEEN:
+            valid, path = can_slide_path(
+                state, piece.position, new_piece_pos, max_steps=1
+            )
+        elif piece.piece_type == HivePieceType.SPIDER:
+            valid, path = can_slide_path(
+                state,
+                piece.position,
+                new_piece_pos,
+                max_steps=3,
+                require_exact_steps=3,
+            )
+        elif piece.piece_type == HivePieceType.GRASSHOPPER:
+            valid = grasshopper_jump_valid(state, piece, new_piece_pos)
+        elif piece.piece_type == HivePieceType.BEETLE:
+            valid = beetle_move_valid(state, piece, new_piece_pos)
+        else:
+            valid = False
+        if not valid:
+            return False, "illegal piece move"
+        return True, ""
+
+    def _player_has_any_legal_move(
+        self, state: HiveGameState, player: HivePlayerState, opponent: HivePlayerState
+    ) -> bool:
+        """Whether `player` has any legal placement or move available at all -
+        used to auto-pass a turn per the rulebook's 'Unable to move or place'
+        rule. Reuses the same validation `play_piece` itself relies on, via
+        `_board_move_valid` and `check_valid_piece_from_hand_move`."""
+        if player.pieces_in_hand:
+            # The Queen has no placement restriction beyond the general
+            # adjacency rules, so it's always a safe representative piece to
+            # probe with - including during the forced turn-4 placement.
+            representative = next(
+                (
+                    p
+                    for p in player.pieces_in_hand
+                    if p.piece_type == HivePieceType.QUEEN
+                ),
+                player.pieces_in_hand[0],
+            )
+            for pos_t in candidate_placement_positions(state.board_state):
+                valid, _ = check_valid_piece_from_hand_move(
+                    state, player, opponent, representative, _tuple_to_pos(pos_t)
+                )
+                if valid:
+                    return True
+
+        if player.has_placed_queen:
+            all_candidates = board_move_candidate_positions(state.board_state)
+            for piece in player.pieces_on_board:
+                assert piece.position is not None
+                candidates = all_candidates - {to_tuple(piece.position)}
+                for cand_t in candidates:
+                    valid, _ = self._board_move_valid(
+                        state, player, piece, _tuple_to_pos(cand_t)
+                    )
+                    if valid:
+                        return True
+
+        return False
 
     def _update_state_after_move(
         self,
@@ -262,6 +320,29 @@ class GameState(models.Model):
             state.turn_no += 1
         state.player1_turn = not state.player1_turn
         self._check_game_over(state)
+
+        # A player with no legal placement or move at all forfeits their turn
+        # (rulebook: "Unable to move or place"). Two passes are enough to
+        # cover both players once; if the loop never finds anyone who can
+        # act, it's a genuine mutual deadlock (neither queen surrounded) -
+        # the `else` clause below declares a draw rather than leaving the
+        # game stuck with game_over still False.
+        for _ in range(2):
+            if state.game_over:
+                break
+            next_player, next_opponent = (
+                (state.player1_state, state.player2_state)
+                if state.player1_turn
+                else (state.player2_state, state.player1_state)
+            )
+            if self._player_has_any_legal_move(state, next_player, next_opponent):
+                break
+            if not state.player1_turn:
+                state.turn_no += 1
+            state.player1_turn = not state.player1_turn
+        else:
+            state.game_over = True
+            state.winner = "draw"
 
         return state
 

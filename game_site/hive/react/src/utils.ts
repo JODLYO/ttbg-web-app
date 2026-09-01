@@ -69,22 +69,6 @@ export function computeBoardRadius(cells: HiveBoardCell[]): number {
     return Math.max(1, maxDist + 1);
 }
 
-export function nodeCenterRelativeToBoard(
-    board: HTMLElement,
-    node: HTMLElement
-) {
-    const boardRect = board.getBoundingClientRect();
-    const nodeRect = node.getBoundingClientRect();
-
-    const centerX = nodeRect.left + nodeRect.width / 2;
-    const centerY = nodeRect.top + nodeRect.height / 2;
-
-    return {
-        x: centerX - boardRect.left - boardRect.width / 2,
-        y: centerY - boardRect.top - boardRect.height / 2,
-    };
-}
-
 export function findClosestHex(
     x: number,
     y: number,
@@ -104,18 +88,4 @@ export function findClosestHex(
     }
 
     return closest;
-}
-export function isNodeOverBoard(
-    board: HTMLElement,
-    node: HTMLElement
-): boolean {
-    const b = board.getBoundingClientRect();
-    const n = node.getBoundingClientRect();
-
-    return !(
-        n.right < b.left ||
-        n.left > b.right ||
-        n.bottom < b.top ||
-        n.top > b.bottom
-    );
 }

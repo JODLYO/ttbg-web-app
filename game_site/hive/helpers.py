@@ -11,6 +11,7 @@ from .game_state import (
     HiveBoardCell,
     HivePieceType,
     HEX_DIRS,
+    TURN_NUMBER_QUEEN_MUST_BE_PLACED,
 )
 
 Pos = Tuple[int, int, int]
@@ -255,14 +256,16 @@ def check_valid_piece_from_hand_move(
     opponent: HivePlayerState,
     piece: HivePieceState,
     placed_piece_pos: HivePosition,
-):
+) -> Tuple[bool, str]:
     if (player.username == state.player1_state.username) != state.player1_turn:
         return False, "Not your turn"
+    if placed_piece_pos in state.board_state.cells:
+        return False, "Cannot place a piece on top of another piece"
     if not state.board_state.cells:  # skip checks if no pieces on board
         return True, ""
     if (
         not player.has_placed_queen
-        and state.turn_no == 3
+        and state.turn_no == TURN_NUMBER_QUEEN_MUST_BE_PLACED
         and piece.piece_type != "queen"
     ):
         return False, "You must place your Queen by your 4th turn"
@@ -320,6 +323,33 @@ def is_queen_surrounded(board: HiveBoardState, queen: HivePieceState) -> bool:
             return False
 
     return True  # all 6 hexes occupied
+
+
+def candidate_placement_positions(board_state: HiveBoardState) -> Set[Pos]:
+    """Every empty hex touching the current hive (or just the origin, pre-game)."""
+    if not board_state.cells:
+        return {(0, 0, 0)}
+    occupied = {to_tuple(p) for p in board_state.cells.keys()}
+    candidates: Set[Pos] = set()
+    for pos in occupied:
+        for nb in _neighbors(pos):
+            assert isinstance(nb, tuple)
+            if nb not in occupied:
+                candidates.add(nb)
+    return candidates
+
+
+def board_move_candidate_positions(board_state: HiveBoardState) -> Set[Pos]:
+    """Every occupied cell plus every empty cell touching the hive - a safe
+    superset of legal destinations for any on-board piece, including a
+    Beetle's climb onto an already-occupied cell."""
+    occupied = {to_tuple(p) for p in board_state.cells.keys()}
+    candidates: Set[Pos] = set(occupied)
+    for pos in occupied:
+        for nb in _neighbors(pos):
+            assert isinstance(nb, tuple)
+            candidates.add(nb)
+    return candidates
 
 
 def rebuild_pieces_on_board(state: HiveGameState):

@@ -2,6 +2,8 @@ from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 from enum import Enum
 
+TURN_NUMBER_QUEEN_MUST_BE_PLACED = 4
+
 HEX_DIRS: List[Tuple[int, int, int]] = [
     (1, -1, 0),
     (1, 0, -1),

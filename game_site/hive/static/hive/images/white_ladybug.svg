@@ -1,0 +1,34 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Head -->
+  <circle cx="100" cy="65" r="16" fill="#2c2c2c"/>
+
+  <!-- Shell -->
+  <ellipse cx="100" cy="125" rx="38" ry="45" fill="#a61c1c"/>
+
+  <!-- Wing case split line -->
+  <line x1="100" y1="85" x2="100" y2="168" stroke="#2c2c2c" stroke-width="2"/>
+
+  <!-- Spots -->
+  <circle cx="82" cy="105" r="7" fill="#2c2c2c"/>
+  <circle cx="118" cy="105" r="7" fill="#2c2c2c"/>
+  <circle cx="78" cy="130" r="6" fill="#2c2c2c"/>
+  <circle cx="122" cy="130" r="6" fill="#2c2c2c"/>
+  <circle cx="88" cy="155" r="6" fill="#2c2c2c"/>
+  <circle cx="112" cy="155" r="6" fill="#2c2c2c"/>
+
+  <!-- Antennae -->
+  <path d="M 92 53 Q 84 42 78 33" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 108 53 Q 116 42 122 33" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+
+  <!-- Legs -->
+  <path d="M 68 105 Q 45 100 35 95" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 132 105 Q 155 100 165 95" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 65 130 Q 42 130 30 135" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 135 130 Q 158 130 170 135" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 68 155 Q 48 165 38 175" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+  <path d="M 132 155 Q 152 165 162 175" stroke="#2c2c2c" stroke-width="2.5" fill="none"/>
+
+  <!-- Eyes -->
+  <circle cx="94" cy="62" r="2.5" fill="#ffffff"/>
+  <circle cx="106" cy="62" r="2.5" fill="#ffffff"/>
+</svg>

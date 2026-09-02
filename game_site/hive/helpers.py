@@ -250,6 +250,127 @@ def can_slide_beetle(
     return True
 
 
+def ladybug_move_valid(
+    state: HiveGameState,
+    piece: HivePieceState,
+    end_pos: HivePosition,
+) -> bool:
+    """Ladybug: exactly 3 steps - climb onto an adjacent occupied hex, climb
+    to another adjacent occupied hex, then drop onto an adjacent empty hex.
+    Unlike can_slide_path this deliberately walks over occupied cells for the
+    first two steps and requires the final cell to be empty, so it can't
+    reuse the empty-only sliding BFS."""
+    start = piece.position
+    if start is None:
+        return False
+
+    occupied = set(state.board_state.cells.keys())
+    occupied.discard(start)  # simulate lifting the ladybug itself
+
+    for a in _neighbors(start):
+        if a not in occupied:
+            continue
+        for b in _neighbors(a):
+            if b == start or b not in occupied:
+                continue
+            for c in _neighbors(b):
+                if c == start or c == a or c in occupied:
+                    continue
+                if c == end_pos:
+                    return True
+    return False
+
+
+def mosquito_move_valid(
+    state: HiveGameState,
+    piece: HivePieceState,
+    end_pos: HivePosition,
+) -> bool:
+    """Mosquito: copies the move of any one adjacent piece type (never
+    another Mosquito, to avoid infinite regress). If it's sitting on top of
+    the hive (having climbed there earlier by copying a Beetle), it can only
+    move as a Beetle from then on."""
+    start = piece.position
+    if start is None:
+        return False
+
+    if piece.stack_height > 0:
+        return beetle_move_valid(state, piece, end_pos)
+
+    adjacent_types = {
+        cell.pieces[-1].piece_type
+        for nb in _neighbors(start)
+        if (cell := state.board_state.cells.get(nb))
+    }
+    adjacent_types.discard(HivePieceType.MOSQUITO)
+
+    for piece_type in adjacent_types:
+        if piece_type == HivePieceType.ANT:
+            valid, _ = can_slide_path(state, start, end_pos)
+        elif piece_type in (HivePieceType.QUEEN, HivePieceType.PILLBUG):
+            valid, _ = can_slide_path(state, start, end_pos, max_steps=1)
+        elif piece_type == HivePieceType.SPIDER:
+            valid, _ = can_slide_path(
+                state, start, end_pos, max_steps=3, require_exact_steps=3
+            )
+        elif piece_type == HivePieceType.GRASSHOPPER:
+            valid = grasshopper_jump_valid(state, piece, end_pos)
+        elif piece_type == HivePieceType.BEETLE:
+            valid = beetle_move_valid(state, piece, end_pos)
+        elif piece_type == HivePieceType.LADYBUG:
+            valid = ladybug_move_valid(state, piece, end_pos)
+        else:
+            valid = False
+        if valid:
+            return True
+    return False
+
+
+def pillbug_throw_valid(
+    state: HiveGameState,
+    pillbug: HivePieceState,
+    target_piece: HivePieceState,
+    target_pos: HivePosition,
+) -> Tuple[bool, str]:
+    """Pillbug special ability: lift an adjacent piece (friendly or enemy)
+    and place it on another empty hex adjacent to the Pillbug. This is a
+    lift, not a slide, so the sliding/gate rule does not apply."""
+    if pillbug.position is None or target_piece.position is None:
+        return False, "illegal throw"
+    if target_piece.id == pillbug.id:
+        return False, "Cannot throw the Pillbug itself"
+    if not pillbug.position.is_adjacent_to(target_piece.position):
+        return False, "Thrown piece must be adjacent to the Pillbug"
+    if not pillbug.position.is_adjacent_to(target_pos):
+        return False, "Destination must be adjacent to the Pillbug"
+    if target_pos in state.board_state.cells:
+        return False, "Destination must be empty"
+
+    src_cell = state.board_state.cells.get(target_piece.position)
+    if not src_cell or src_cell.pieces[-1].id != target_piece.id:
+        return False, "Can only throw the top piece of a stack"
+    if len(src_cell.pieces) > 1:
+        return False, "Cannot throw a piece with something stacked on it"
+
+    if (
+        state.last_moved_piece_id == target_piece.id
+        and state.last_moved_ply == state.ply - 1
+    ):
+        return False, "That piece moved last turn and cannot be thrown"
+
+    temp_board = state.board_state.model_copy(deep=True)
+    del temp_board.cells[target_piece.position]
+    if not hive_is_connected(temp_board):
+        return False, "Hive not connected during throw"
+    temp_board.cells[target_pos] = HiveBoardCell(
+        position=target_pos, pieces=[target_piece]
+    )
+    if not hive_is_connected(temp_board):
+        return False, "Hive not connected after throw"
+
+    return True, ""
+
+
 def check_valid_piece_from_hand_move(
     state: HiveGameState,
     player: HivePlayerState,

@@ -1,4 +1,5 @@
 import type { HiveGameState, HivePieceState, HivePosition } from "./types";
+import { HivePieceType } from "./types";
 import { HexCell2D, HexCell3D } from "./HexCells";
 import { useRef, useState, useEffect } from "react";
 import { hexToPixel, findClosestHex, computeBoardCells } from "./utils";
@@ -31,12 +32,24 @@ export default function HiveBoardSVG({
   onDropPiece,
   onHoverHexChange,
   playerColors,
+  currentUsername,
+  armedPillbug,
+  throwTarget,
+  onArmPillbug,
+  onSelectThrowTarget,
+  onCompleteThrow,
 }: {
   gameState: HiveGameState;
   hoverHex: HivePosition | null;
   onDropPiece?: (piece: HivePieceState, pos: HivePosition) => void;
   onHoverHexChange?: (hex: HivePosition | null) => void;
   playerColors: Record<string, string>;
+  currentUsername?: string;
+  armedPillbug?: HivePieceState | null;
+  throwTarget?: HivePieceState | null;
+  onArmPillbug?: (piece: HivePieceState | null) => void;
+  onSelectThrowTarget?: (piece: HivePieceState) => void;
+  onCompleteThrow?: (pos: HivePosition) => void;
 }) {
   const cellMap = gameState.board_state.cells;
   const hexPositions = computeBoardCells(Object.values(cellMap));
@@ -217,13 +230,44 @@ export default function HiveBoardSVG({
                 <div
                   onPointerDown={(e) => {
                     e.stopPropagation();
+                    if (armedPillbug) {
+                      if (topPiece.id === armedPillbug.id) {
+                        onArmPillbug?.(null); // clicking the armed Pillbug again cancels
+                      } else if (!throwTarget) {
+                        onSelectThrowTarget?.(topPiece);
+                      }
+                      return;
+                    }
                     setDraggingPiece(topPiece);
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    if (
+                      topPiece.piece_type === HivePieceType.PILLBUG &&
+                      topPiece.owner === currentUsername
+                    ) {
+                      onArmPillbug?.(
+                        armedPillbug?.id === topPiece.id ? null : topPiece
+                      );
+                    }
                   }}
                   style={{
                     width: "100%",
                     height: "100%",
-                    cursor: "grab",
-                    opacity: draggingPiece?.id === topPiece.id ? 0.3 : 1,
+                    cursor:
+                      topPiece.piece_type === HivePieceType.PILLBUG &&
+                      topPiece.owner === currentUsername
+                        ? "context-menu"
+                        : "grab",
+                    opacity:
+                      draggingPiece?.id === topPiece.id ||
+                      throwTarget?.id === topPiece.id
+                        ? 0.3
+                        : 1,
+                    outline:
+                      armedPillbug?.id === topPiece.id
+                        ? "3px solid #2ecc71"
+                        : undefined,
                   }}
                 >
                   <HexCell3D
@@ -233,7 +277,16 @@ export default function HiveBoardSVG({
                   />
                 </div>
               ) : (
-                <HexCell2D size={`${HEX_SIZE}px`} highlight={Boolean(isHover)} />
+                <div
+                  onPointerDown={(e) => {
+                    if (armedPillbug && throwTarget) {
+                      e.stopPropagation();
+                      onCompleteThrow?.(pos);
+                    }
+                  }}
+                >
+                  <HexCell2D size={`${HEX_SIZE}px`} highlight={Boolean(isHover)} />
+                </div>
               )}
             </div>
           );

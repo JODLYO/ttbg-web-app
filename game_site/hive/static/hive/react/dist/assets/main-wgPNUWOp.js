@@ -13054,6 +13054,17 @@ function requireClient() {
 }
 __name(requireClient, "requireClient");
 var clientExports = requireClient();
+var HivePieceType = /* @__PURE__ */ ((HivePieceType2) => {
+  HivePieceType2["QUEEN"] = "queen";
+  HivePieceType2["ANT"] = "ant";
+  HivePieceType2["SPIDER"] = "spider";
+  HivePieceType2["BEETLE"] = "beetle";
+  HivePieceType2["GRASSHOPPER"] = "grasshopper";
+  HivePieceType2["MOSQUITO"] = "mosquito";
+  HivePieceType2["LADYBUG"] = "ladybug";
+  HivePieceType2["PILLBUG"] = "pillbug";
+  return HivePieceType2;
+})(HivePieceType || {});
 const ICON_SIZE = 100;
 const ICON_X = 200 - ICON_SIZE / 2;
 const ICON_Y = 130 - ICON_SIZE / 2 - 5;
@@ -13262,7 +13273,13 @@ function HiveBoardSVG({
   hoverHex,
   onDropPiece,
   onHoverHexChange,
-  playerColors
+  playerColors,
+  currentUsername,
+  armedPillbug,
+  throwTarget,
+  onArmPillbug,
+  onSelectThrowTarget,
+  onCompleteThrow
 }) {
   const cellMap = gameState.board_state.cells;
   const hexPositions = computeBoardCells(Object.values(cellMap));
@@ -13374,13 +13391,30 @@ function HiveBoardSVG({
                     {
                       onPointerDown: /* @__PURE__ */ __name((e) => {
                         e.stopPropagation();
+                        if (armedPillbug) {
+                          if (topPiece.id === armedPillbug.id) {
+                            onArmPillbug?.(null);
+                          } else if (!throwTarget) {
+                            onSelectThrowTarget?.(topPiece);
+                          }
+                          return;
+                        }
                         setDraggingPiece(topPiece);
                       }, "onPointerDown"),
+                      onContextMenu: /* @__PURE__ */ __name((e) => {
+                        e.preventDefault();
+                        if (topPiece.piece_type === HivePieceType.PILLBUG && topPiece.owner === currentUsername) {
+                          onArmPillbug?.(
+                            armedPillbug?.id === topPiece.id ? null : topPiece
+                          );
+                        }
+                      }, "onContextMenu"),
                       style: {
                         width: "100%",
                         height: "100%",
-                        cursor: "grab",
-                        opacity: draggingPiece?.id === topPiece.id ? 0.3 : 1
+                        cursor: topPiece.piece_type === HivePieceType.PILLBUG && topPiece.owner === currentUsername ? "context-menu" : "grab",
+                        opacity: draggingPiece?.id === topPiece.id || throwTarget?.id === topPiece.id ? 0.3 : 1,
+                        outline: armedPillbug?.id === topPiece.id ? "3px solid #2ecc71" : void 0
                       },
                       children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                         HexCell3D,
@@ -13391,7 +13425,18 @@ function HiveBoardSVG({
                         }
                       )
                     }
-                  ) : /* @__PURE__ */ jsxRuntimeExports.jsx(HexCell2D, { size: `${HEX_SIZE}px`, highlight: Boolean(isHover) })
+                  ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      onPointerDown: /* @__PURE__ */ __name((e) => {
+                        if (armedPillbug && throwTarget) {
+                          e.stopPropagation();
+                          onCompleteThrow?.(pos);
+                        }
+                      }, "onPointerDown"),
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(HexCell2D, { size: `${HEX_SIZE}px`, highlight: Boolean(isHover) })
+                    }
+                  )
                 },
                 key
               );
@@ -14794,6 +14839,8 @@ function GameBoard() {
   const socketRef = reactExports.useRef(null);
   const [gameState, setGameState] = reactExports.useState(null);
   const [hoverHex, setHoverHex] = reactExports.useState(null);
+  const [armedPillbug, setArmedPillbug] = reactExports.useState(null);
+  const [throwTarget, setThrowTarget] = reactExports.useState(null);
   const gameData = window.gameData;
   const { gameStateId, lobbyId, username } = gameData;
   function sendMove(piece, pos) {
@@ -14808,6 +14855,39 @@ function GameBoard() {
     );
   }
   __name(sendMove, "sendMove");
+  function cancelThrow() {
+    setArmedPillbug(null);
+    setThrowTarget(null);
+  }
+  __name(cancelThrow, "cancelThrow");
+  function handleArmPillbug(piece) {
+    setArmedPillbug(
+      (current) => current && piece && current.id === piece.id ? null : piece
+    );
+    setThrowTarget(null);
+  }
+  __name(handleArmPillbug, "handleArmPillbug");
+  function handleCompleteThrow(pos) {
+    if (!socketRef.current || !armedPillbug || !throwTarget) return;
+    socketRef.current.send(
+      JSON.stringify({
+        action: "pillbug_throw",
+        pillbug: armedPillbug,
+        target_piece: throwTarget,
+        target_position: pos,
+        username
+      })
+    );
+    cancelThrow();
+  }
+  __name(handleCompleteThrow, "handleCompleteThrow");
+  reactExports.useEffect(() => {
+    const handler = /* @__PURE__ */ __name((e) => {
+      if (e.key === "Escape") cancelThrow();
+    }, "handler");
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
   reactExports.useEffect(() => {
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const socket = new WebSocket(
@@ -14872,16 +14952,25 @@ function GameBoard() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "hive-section board", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        HiveBoardSVG,
-        {
-          gameState,
-          hoverHex,
-          onHoverHexChange: setHoverHex,
-          onDropPiece: sendMove,
-          playerColors
-        }
-      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "hive-section board", children: [
+        armedPillbug && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pillbug-throw-hint", children: throwTarget ? "Click an empty hex adjacent to the Pillbug to complete the throw (Esc to cancel)" : "Click a piece adjacent to the Pillbug to throw it (Esc to cancel)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          HiveBoardSVG,
+          {
+            gameState,
+            hoverHex,
+            onHoverHexChange: setHoverHex,
+            onDropPiece: sendMove,
+            playerColors,
+            currentUsername: username,
+            armedPillbug,
+            throwTarget,
+            onArmPillbug: handleArmPillbug,
+            onSelectThrowTarget: setThrowTarget,
+            onCompleteThrow: handleCompleteThrow
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: `hive-section you ${gameState.player1_turn && you === p1 || !gameState.player1_turn && you === p2 ? "turn-active" : ""}`, style: { zIndex: 100 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { children: [
           you.username,
@@ -14957,4 +15046,4 @@ __name(App, "App");
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(reactExports.StrictMode, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, {}) })
 );
-//# sourceMappingURL=main-dOZ_JIQ7.js.map
+//# sourceMappingURL=main-wgPNUWOp.js.map

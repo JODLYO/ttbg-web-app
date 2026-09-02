@@ -16,6 +16,9 @@ from .helpers import (
     hive_is_connected,
     beetle_move_valid,
     grasshopper_jump_valid,
+    ladybug_move_valid,
+    mosquito_move_valid,
+    pillbug_throw_valid,
     check_valid_piece_from_hand_move,
     hiveboard_from_json_dict,
     is_queen_surrounded,
@@ -34,6 +37,9 @@ class Lobby(BaseLobby):
     players = models.ManyToManyField(
         User, through="LobbyPlayer", related_name="lobby_hive"
     )
+    mosquito_enabled = models.BooleanField(default=True)
+    ladybug_enabled = models.BooleanField(default=True)
+    pillbug_enabled = models.BooleanField(default=True)
 
 
 class LobbyPlayer(BaseLobbyPlayer):
@@ -63,10 +69,9 @@ class Piece(models.Model):
         ("spider", "Spider"),
         ("beetle", "Beetle"),
         ("grasshopper", "Grasshopper"),
-        # expansions can be added later
-        # ("mosquito", "Mosquito"),
-        # ("ladybug", "Ladybug"),
-        # ("pillbug", "Pillbug"),
+        ("mosquito", "Mosquito"),
+        ("ladybug", "Ladybug"),
+        ("pillbug", "Pillbug"),
     ]
     COLOUR_CHOICES = [
         ("white", "White"),
@@ -120,9 +125,22 @@ class GameState(models.Model):
         super().save(*args, **kwargs)
 
     def initialize_game_state(self, players: List[User], player1_turn: bool = True):
+        lobby = self.lobby
+        disabled_types = [
+            piece_type
+            for piece_type, enabled in (
+                ("mosquito", lobby.mosquito_enabled),
+                ("ladybug", lobby.ladybug_enabled),
+                ("pillbug", lobby.pillbug_enabled),
+            )
+            if not enabled
+        ]
+
         hive_players: List[HivePlayerState] = []
         for user, colour in zip(players, ("white", "black")):
-            pieces = Piece.objects.filter(colour=colour)
+            pieces = Piece.objects.filter(colour=colour).exclude(
+                piece_type__in=disabled_types
+            )
             pieces_in_hand: List[HivePieceState] = []
             for piece in pieces:
                 pieces_in_hand.append(
@@ -189,6 +207,48 @@ class GameState(models.Model):
         self.save()
         return True, ""
 
+    def throw_piece(
+        self,
+        pillbug: HivePieceState,
+        target_piece: HivePieceState,
+        target_pos: HivePosition,
+        username: str,
+    ) -> Tuple[bool, str]:
+        """Pillbug special ability: use the pillbug's turn to lift an
+        adjacent piece (friendly or enemy) and place it on another empty
+        hex adjacent to the pillbug, instead of the pillbug moving itself."""
+        state: HiveGameState = self.state_obj
+        player, opponent = self._get_player_and_opponent_states(state, username)
+
+        is_player1_turn = state.player1_turn
+        is_player1 = player is state.player1_state
+        if is_player1_turn != is_player1:
+            return False, "It is not your turn"
+
+        if not any(p for p in player.pieces_on_board if p == pillbug):
+            return False, "You do not have that Pillbug on the board"
+        if pillbug.piece_type != HivePieceType.PILLBUG:
+            return False, "Only a Pillbug can throw"
+        if not player.has_placed_queen:
+            return (
+                False,
+                "You must place your Queen Bee before using the Pillbug's ability",
+            )
+
+        valid, message = pillbug_throw_valid(state, pillbug, target_piece, target_pos)
+        if not valid:
+            return False, message
+
+        target_owner = self._owner_state(state, target_piece)
+        state = self._update_state_after_move(
+            state, target_owner, target_piece, target_pos
+        )
+        if not hive_is_connected(state.board_state):
+            return False, "Hive not connected after throw"
+        self.state_obj = state
+        self.save()
+        return True, ""
+
     def _get_player_and_opponent_states(self, state: HiveGameState, username: str):
         player = (
             state.player1_state
@@ -202,6 +262,15 @@ class GameState(models.Model):
         )
         return player, opponent
 
+    def _owner_state(
+        self, state: HiveGameState, piece: HivePieceState
+    ) -> HivePlayerState:
+        return (
+            state.player1_state
+            if piece.owner == state.player1_state.username
+            else state.player2_state
+        )
+
     def _board_move_valid(
         self,
         state: HiveGameState,
@@ -213,8 +282,15 @@ class GameState(models.Model):
             return False, "You must place your Queen Bee before moving other pieces"
         if piece.position is None:
             return False, "illegal piece move"
+        if state.board_state.cells[piece.position].pieces[-1].id != piece.id:
+            return False, "This piece is buried and cannot move"
+
         temp_board = state.board_state.model_copy(deep=True)
-        del temp_board.cells[piece.position]
+        temp_cell = temp_board.cells[piece.position]
+        if len(temp_cell.pieces) > 1:
+            temp_cell.pieces.pop()  # only the top piece lifts off - the rest stay put
+        else:
+            del temp_board.cells[piece.position]
         if not hive_is_connected(temp_board):
             return False, "Hive not connected during move"
         if piece.piece_type == HivePieceType.ANT:
@@ -235,6 +311,14 @@ class GameState(models.Model):
             valid = grasshopper_jump_valid(state, piece, new_piece_pos)
         elif piece.piece_type == HivePieceType.BEETLE:
             valid = beetle_move_valid(state, piece, new_piece_pos)
+        elif piece.piece_type == HivePieceType.PILLBUG:
+            valid, path = can_slide_path(
+                state, piece.position, new_piece_pos, max_steps=1
+            )
+        elif piece.piece_type == HivePieceType.LADYBUG:
+            valid = ladybug_move_valid(state, piece, new_piece_pos)
+        elif piece.piece_type == HivePieceType.MOSQUITO:
+            valid = mosquito_move_valid(state, piece, new_piece_pos)
         else:
             valid = False
         if not valid:
@@ -305,6 +389,9 @@ class GameState(models.Model):
                 player.has_placed_queen = True
 
         piece.position = placed_piece_pos
+        state.ply += 1
+        state.last_moved_piece_id = piece.id
+        state.last_moved_ply = state.ply
 
         if state.board_state.cells.get(placed_piece_pos):
             state.board_state.cells[placed_piece_pos].pieces.append(piece)

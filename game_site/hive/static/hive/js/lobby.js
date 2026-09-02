@@ -5,7 +5,15 @@ const lobbyId = document.getElementById('lobby-id').dataset.lobbyId;
 const readyUrl = document.getElementById('ready-form-container').dataset.readyUrl;
 const currentUsername = document.getElementById('current-player').textContent;
 const lobbyStatusUrl = document.getElementById('lobby-id').getAttribute('data-lobby-status-url');
+const lobbySettingsUrl = document.getElementById('lobby-id').getAttribute('data-lobby-settings-url');
 const gameUrlTemplate = document.getElementById("game-url").dataset.readyUrl;
+
+const EXPANSION_FIELDS = ['mosquito_enabled', 'ladybug_enabled', 'pillbug_enabled'];
+const EXPANSION_CHECKBOX_IDS = {
+    mosquito_enabled: 'toggle-mosquito',
+    ladybug_enabled: 'toggle-ladybug',
+    pillbug_enabled: 'toggle-pillbug',
+};
 
 function getGameUrl(gameStateId) {
     return gameUrlTemplate.replace(/0\/$/, gameStateId + "/");
@@ -50,10 +58,38 @@ function updatePlayerList(players) {
     });
 }
 
+function updateExpansionSettings(data) {
+    EXPANSION_FIELDS.forEach(field => {
+        const checkbox = document.getElementById(EXPANSION_CHECKBOX_IDS[field]);
+        if (!checkbox) return;
+        // Don't fight the user's in-progress click, and lock once ready.
+        if (document.activeElement !== checkbox && field in data) {
+            checkbox.checked = data[field];
+        }
+        checkbox.disabled = Boolean(data.all_ready);
+    });
+}
+
+function setExpansion(field, enabled) {
+    fetch(lobbySettingsUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        credentials: 'include',
+        body: JSON.stringify({ [field]: enabled })
+    })
+        .then(r => r.json())
+        .catch(err => console.error("Error updating expansion setting:", err));
+}
+
 function updateLobbyUI(data) {
     const waitingMessage = document.getElementById('waiting-message');
     const readyButton = document.getElementById('ready-button');
     const playerCount = document.getElementById('player-count');
+
+    updateExpansionSettings(data);
 
     playerCount.textContent = `Players: ${data.players.length}/${MAX_PLAYERS}`;
 

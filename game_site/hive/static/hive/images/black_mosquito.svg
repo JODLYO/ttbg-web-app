@@ -1,0 +1,33 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Proboscis -->
+  <path d="M 100 55 L 100 25" stroke="#ffffff" stroke-width="3" fill="none"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="65" r="12" fill="#a9c9cb" stroke="#8fb3b5" stroke-width="1"/>
+
+  <!-- Thorax -->
+  <ellipse cx="100" cy="90" rx="11" ry="16" fill="#a9c9cb" stroke="#8fb3b5" stroke-width="1"/>
+
+  <!-- Abdomen (slender) -->
+  <ellipse cx="100" cy="130" rx="14" ry="35" fill="#bcd8da" stroke="#8fb3b5" stroke-width="1"/>
+
+  <!-- Antennae -->
+  <path d="M 92 58 Q 82 48 76 40" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 108 58 Q 118 48 124 40" stroke="#ffffff" stroke-width="2" fill="none"/>
+
+  <!-- Wings -->
+  <ellipse cx="82" cy="100" rx="22" ry="10" fill="#ffffff" opacity="0.6" transform="rotate(-20 82 100)"/>
+  <ellipse cx="118" cy="100" rx="22" ry="10" fill="#ffffff" opacity="0.6" transform="rotate(20 118 100)"/>
+
+  <!-- Long thin legs -->
+  <path d="M 90 90 Q 55 90 40 100" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 110 90 Q 145 90 160 100" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 88 105 Q 50 115 35 130" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 112 105 Q 150 115 165 130" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 90 120 Q 60 140 50 160" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 110 120 Q 140 140 150 160" stroke="#ffffff" stroke-width="2" fill="none"/>
+
+  <!-- Eyes -->
+  <circle cx="95" cy="63" r="2.5" fill="#2c2c2c"/>
+  <circle cx="105" cy="63" r="2.5" fill="#2c2c2c"/>
+</svg>

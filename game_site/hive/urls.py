@@ -12,4 +12,9 @@ urlpatterns = [
         views.lobby_ready,
         name="lobby_set_ready",
     ),
+    path(
+        "api/lobby_status/<int:lobby_id>/settings/",
+        views.lobby_settings,
+        name="lobby_settings",
+    ),
 ]

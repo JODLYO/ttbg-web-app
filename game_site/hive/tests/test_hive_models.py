@@ -2,7 +2,9 @@
 
 from unittest.mock import patch
 
-from django.test import TestCase
+import json
+
+from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from hive.models import Lobby, LobbyPlayer, Piece, GameState
 from hive.helpers import hive_is_connected, is_queen_surrounded
@@ -17,7 +19,7 @@ from hive.game_state import (
 )
 from django.core.management import call_command
 
-TOTAL_PLAYER_PIECES = 11
+TOTAL_PLAYER_PIECES = 14
 
 
 class PieceModelTest(TestCase):
@@ -234,6 +236,107 @@ class GameStateModelTest(TestCase):
         self.assertIn("top of another piece", msg.lower())
         origin_cell = state.board_state.cells[HivePosition(q=0, r=0, s=0)]
         self.assertEqual(len(origin_cell.pieces), 1)
+
+    def test_seeded_pieces_include_expansions(self):
+        for piece_type in ("mosquito", "ladybug", "pillbug"):
+            self.assertEqual(
+                Piece.objects.filter(piece_type=piece_type, colour="white").count(), 1
+            )
+            self.assertEqual(
+                Piece.objects.filter(piece_type=piece_type, colour="black").count(), 1
+            )
+
+    def test_ladybug_full_move_via_play_piece(self):
+        state = self.game_state.state_obj
+        # Queen placed first so player1 can move on their very next turn; the
+        # Ladybug is placed as a leaf off the Queen so moving it never risks
+        # disconnecting the hive (nothing else depends on it for connectivity).
+        self.move_test_helper(
+            state, True, HivePosition(q=0, r=0, s=0), HivePieceType.QUEEN, True
+        )
+        self.move_test_helper(
+            state, False, HivePosition(q=1, r=-1, s=0), HivePieceType.ANT, True
+        )
+        self.move_test_helper(
+            state, True, HivePosition(q=-1, r=1, s=0), HivePieceType.LADYBUG, True
+        )
+        self.move_test_helper(
+            state, False, HivePosition(q=2, r=-1, s=-1), HivePieceType.SPIDER, True
+        )
+
+        ladybug = state.board_state.cells[HivePosition(q=-1, r=1, s=0)].pieces[-1]
+        # climb onto the Queen at (0,0,0) -> climb onto the Ant at (1,-1,0)
+        # -> drop onto the empty hex at (1,0,-1)
+        landing = HivePosition(q=1, r=0, s=-1)
+        valid, msg = self.game_state.play_piece(ladybug, landing, username="player1")
+        self.assertTrue(valid, msg)
+        self.assertEqual(
+            self.game_state.state_obj.board_state.cells[landing].pieces[-1].stack_height,
+            0,
+        )
+
+    def test_pillbug_moves_like_queen(self):
+        state = self.game_state.state_obj
+        # Queen placed first so player1 can move on their very next turn;
+        # the Pillbug is placed as a leaf off the Queen so moving it never
+        # risks disconnecting the hive (it has nothing hanging off it).
+        self.move_test_helper(
+            state, True, HivePosition(q=0, r=0, s=0), HivePieceType.QUEEN, True
+        )
+        self.move_test_helper(
+            state, False, HivePosition(q=1, r=-1, s=0), HivePieceType.ANT, True
+        )
+        self.move_test_helper(
+            state, True, HivePosition(q=-1, r=1, s=0), HivePieceType.PILLBUG, True
+        )
+        self.move_test_helper(
+            state, False, HivePosition(q=2, r=-2, s=0), HivePieceType.QUEEN, True
+        )
+
+        pillbug = state.board_state.cells[HivePosition(q=-1, r=1, s=0)].pieces[-1]
+        # Two hexes away - illegal for a Pillbug's own move (Queen-like, 1 step).
+        far = HivePosition(q=1, r=1, s=-2)
+        valid, _ = self.game_state.play_piece(pillbug, far, username="player1")
+        self.assertFalse(valid)
+
+        adjacent = HivePosition(q=0, r=1, s=-1)
+        valid, msg = self.game_state.play_piece(pillbug, adjacent, username="player1")
+        self.assertTrue(valid, msg)
+
+    def test_pillbug_throw_via_model_method(self):
+        state = self.game_state.state_obj
+        self.move_test_helper(
+            state, True, HivePosition(q=0, r=0, s=0), HivePieceType.PILLBUG, True
+        )
+        self.move_test_helper(
+            state, False, HivePosition(q=1, r=-1, s=0), HivePieceType.ANT, True
+        )
+        self.move_test_helper(
+            state, True, HivePosition(q=-1, r=1, s=0), HivePieceType.QUEEN, True
+        )
+        self.move_test_helper(
+            state, False, HivePosition(q=2, r=-1, s=-1), HivePieceType.SPIDER, True
+        )
+
+        pillbug = state.board_state.cells[HivePosition(q=0, r=0, s=0)].pieces[-1]
+        # A Pillbug can throw a friendly piece too - throwing its own Queen
+        # (a leaf, hanging only off the Pillbug) keeps this test focused on
+        # the throw mechanics without also having to reason about whether
+        # removing an *opponent* piece would disconnect their side of the
+        # hive.
+        own_queen = state.board_state.cells[HivePosition(q=-1, r=1, s=0)].pieces[-1]
+        dest = HivePosition(q=1, r=0, s=-1)
+
+        valid, msg = self.game_state.throw_piece(
+            pillbug, own_queen, dest, username="player1"
+        )
+        self.assertTrue(valid, msg)
+
+        final = self.game_state.state_obj
+        self.assertFalse(final.player1_turn)  # turn passed to player2
+        self.assertEqual(final.last_moved_piece_id, own_queen.id)
+        self.assertIn(dest, final.board_state.cells)
+        self.assertNotIn(HivePosition(q=-1, r=1, s=0), final.board_state.cells)
 
     def test_save_updates_timestamp(self):
         before = self.game_state.created_at
@@ -729,6 +832,133 @@ def test_player_has_any_legal_move_false_when_queen_boxed_in():
     assert gs._player_has_any_legal_move(state, opn, boxed)  # sanity: opn isn't stuck
 
 
+class StackedPieceMoveTest(TestCase):
+    """A Beetle climbing on top of another piece must not let that buried
+    piece be moved as if it were free, and must not make the Beetle's own
+    later moves wrongly rejected as breaking the hive."""
+
+    @classmethod
+    def setUpTestData(cls):
+        if not Piece.objects.exists():
+            call_command("seed_hive_pieces")
+
+        cls.user1 = User.objects.create(username="player1")
+        cls.user2 = User.objects.create(username="player2")
+        cls.lobby = Lobby.objects.create()
+        LobbyPlayer.objects.create(lobby=cls.lobby, player=cls.user1, ready=True)
+        LobbyPlayer.objects.create(lobby=cls.lobby, player=cls.user2, ready=True)
+
+        cls.game_state = GameState.objects.create(lobby=cls.lobby)
+        cls.game_state.initialize_game_state([cls.user1, cls.user2])
+
+    def test_buried_piece_cannot_be_moved(self):
+        state = self.game_state.state_obj
+        p1 = state.player1_state
+
+        queen = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.QUEEN)
+        ant = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.ANT)
+        beetle = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.BEETLE)
+        spider = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.SPIDER)
+
+        queen_pos = HivePosition(q=0, r=0, s=0)
+        ant_pos = HivePosition(q=1, r=-1, s=0)
+        spider_pos = HivePosition(q=0, r=-1, s=1)
+
+        for piece, pos in ((queen, queen_pos), (ant, ant_pos), (spider, spider_pos)):
+            piece.position = pos
+            piece.placed = True
+        queen.stack_height = ant.stack_height = spider.stack_height = 0
+        p1.has_placed_queen = True
+
+        # Beetle climbs on top of the Ant, at the same hex.
+        beetle.position = ant_pos
+        beetle.placed = True
+        beetle.stack_height = 1
+
+        p1.pieces_in_hand = [
+            p for p in p1.pieces_in_hand if p not in (queen, ant, beetle, spider)
+        ]
+        p1.pieces_on_board = [queen, ant, beetle, spider]
+
+        state.board_state = HiveBoardState(
+            cells={
+                queen_pos: HiveBoardCell(position=queen_pos, pieces=[queen]),
+                ant_pos: HiveBoardCell(position=ant_pos, pieces=[ant, beetle]),
+                spider_pos: HiveBoardCell(position=spider_pos, pieces=[spider]),
+            }
+        )
+        self.game_state.state_obj = state
+        self.game_state.save()
+
+        # The Ant is buried under the Beetle - it must not be movable.
+        dest = HivePosition(q=1, r=0, s=-1)
+        valid, message = self.game_state.play_piece(ant, dest, username="player1")
+        self.assertFalse(valid)
+        self.assertIn("buried", message.lower())
+
+        final = self.game_state.state_obj
+        self.assertEqual(final.board_state.cells[ant_pos].pieces, [ant, beetle])
+
+    def test_beetle_move_off_bridge_piece_is_legal(self):
+        state = self.game_state.state_obj
+        p1 = state.player1_state
+
+        queen = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.QUEEN)
+        x = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.SPIDER)
+        y = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.ANT)
+        z = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.GRASSHOPPER)
+        beetle = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.BEETLE)
+
+        queen_pos = HivePosition(q=-1, r=0, s=1)
+        x_pos = HivePosition(q=0, r=0, s=0)
+        y_pos = HivePosition(q=1, r=-1, s=0)  # sole bridge between X and Z
+        z_pos = HivePosition(q=2, r=-2, s=0)
+
+        for piece, pos in (
+            (queen, queen_pos),
+            (x, x_pos),
+            (y, y_pos),
+            (z, z_pos),
+        ):
+            piece.position = pos
+            piece.placed = True
+            piece.stack_height = 0
+        p1.has_placed_queen = True
+
+        # Beetle climbs on top of Y - the bridge piece - without moving Y.
+        beetle.position = y_pos
+        beetle.placed = True
+        beetle.stack_height = 1
+
+        pieces_placed = (queen, x, y, z, beetle)
+        p1.pieces_in_hand = [p for p in p1.pieces_in_hand if p not in pieces_placed]
+        p1.pieces_on_board = list(pieces_placed)
+
+        state.board_state = HiveBoardState(
+            cells={
+                queen_pos: HiveBoardCell(position=queen_pos, pieces=[queen]),
+                x_pos: HiveBoardCell(position=x_pos, pieces=[x]),
+                y_pos: HiveBoardCell(position=y_pos, pieces=[y, beetle]),
+                z_pos: HiveBoardCell(position=z_pos, pieces=[z]),
+            }
+        )
+        self.game_state.state_obj = state
+        self.game_state.save()
+
+        # The Beetle climbs down off Y onto an empty hex still adjacent to Y.
+        # Y itself never moves, so X-Y-Z stays fully connected the whole time.
+        dest = HivePosition(q=1, r=0, s=-1)
+        self.assertNotIn(dest, state.board_state.cells)
+        self.assertTrue(dest.is_adjacent_to(y_pos))
+
+        valid, message = self.game_state.play_piece(beetle, dest, username="player1")
+        self.assertTrue(valid, message)
+
+        final = self.game_state.state_obj
+        self.assertEqual(final.board_state.cells[y_pos].pieces, [y])
+        self.assertEqual(final.board_state.cells[dest].pieces, [beetle])
+
+
 class MutualDeadlockTest(TestCase):
     """Regression test: if BOTH players are simultaneously out of legal
     moves (a true mutual deadlock, distinct from either Queen being
@@ -765,3 +995,61 @@ class MutualDeadlockTest(TestCase):
 
         self.assertTrue(result.game_over)
         self.assertEqual(result.winner, "draw")
+
+
+class ExpansionToggleTest(TestCase):
+    """Expansion pieces (Mosquito/Ladybug/Pillbug) are enabled by default but
+    can be turned off per lobby before the game starts."""
+
+    @classmethod
+    def setUpTestData(cls):
+        if not Piece.objects.exists():
+            call_command("seed_hive_pieces")
+        cls.user1 = User.objects.create(username="player1")
+        cls.user2 = User.objects.create(username="player2")
+
+    def test_initialize_game_state_excludes_disabled_expansion(self):
+        lobby = Lobby.objects.create(pillbug_enabled=False)
+        LobbyPlayer.objects.create(lobby=lobby, player=self.user1, ready=True)
+        LobbyPlayer.objects.create(lobby=lobby, player=self.user2, ready=True)
+        game_state = GameState.objects.create(lobby=lobby)
+        game_state.initialize_game_state([self.user1, self.user2])
+
+        state = game_state.state_obj
+        for player in (state.player1_state, state.player2_state):
+            types = {p.piece_type for p in player.pieces_in_hand}
+            self.assertNotIn(HivePieceType.PILLBUG, types)
+            self.assertIn(HivePieceType.MOSQUITO, types)
+            self.assertIn(HivePieceType.LADYBUG, types)
+
+    def test_lobby_settings_view_updates_toggles_and_locks_after_start(self):
+        lobby = Lobby.objects.create()
+        LobbyPlayer.objects.create(lobby=lobby, player=self.user1)
+        LobbyPlayer.objects.create(lobby=lobby, player=self.user2)
+
+        client = Client()
+        client.force_login(self.user1)
+        url = f"/hive/api/lobby_status/{lobby.id}/settings/"
+
+        response = client.post(
+            url,
+            data=json.dumps({"mosquito_enabled": False}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        lobby.refresh_from_db()
+        self.assertFalse(lobby.mosquito_enabled)
+        self.assertTrue(lobby.ladybug_enabled)
+
+        game_state = GameState.objects.create(lobby=lobby)
+        lobby.game_state = game_state
+        lobby.save()
+
+        response = client.post(
+            url,
+            data=json.dumps({"ladybug_enabled": False}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        lobby.refresh_from_db()
+        self.assertTrue(lobby.ladybug_enabled)  # unchanged - settings locked

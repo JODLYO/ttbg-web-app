@@ -59,6 +59,7 @@ body {
   align-items: center;
   width: 100%;
   max-width: 100%;
+  position: relative;
 }
 
 .hive-board-origin {
@@ -259,4 +260,18 @@ h2 {
   width: 100%;
   padding: var(--pad) 0;
   border-bottom: 1px solid #ccc;
+}
+
+.pillbug-throw-hint {
+  position: absolute;
+  top: calc(var(--pad) * 0.5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid #2ecc71;
+  border-radius: 6px;
+  padding: calc(var(--pad) * 0.4) calc(var(--pad) * 0.8);
+  font-size: var(--font-sm);
+  white-space: nowrap;
 }

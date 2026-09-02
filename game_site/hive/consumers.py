@@ -35,6 +35,8 @@ class HiveConsumer(AsyncWebsocketConsumer):
             await self.send_game_state()
         elif action == "play_piece":
             await self.handle_play_piece(data)
+        elif action == "pillbug_throw":
+            await self.handle_pillbug_throw(data)
         else:
             await self.manager.send_error(f"No handler for action {action}")
 
@@ -110,6 +112,38 @@ class HiveConsumer(AsyncWebsocketConsumer):
         username: str,
     ) -> Tuple[bool, str]:
         return game_state.play_piece(piece, position, username)
+
+    async def handle_pillbug_throw(self, data: Dict[str, Any]) -> None:
+        pillbug = HivePieceState(**data["pillbug"])
+        target_piece = HivePieceState(**data["target_piece"])
+        target_pos = HivePosition(**data["target_position"])
+        user = self.scope["user"]
+
+        game_state = await self.get_game_state()
+        is_player = await sync_to_async(
+            lambda: game_state.lobby.players.filter(id=user.id).exists()
+        )()
+        if not is_player:
+            return await self.manager.send_error("You are not a player in this game")
+
+        success, message = await self.throw_piece(
+            game_state, pillbug, target_piece, target_pos, user.username
+        )
+        if not success:
+            return await self.manager.send_error(message)
+
+        await self.manager.broadcast_group("send_game_state", {})
+
+    @database_sync_to_async
+    def throw_piece(
+        self,
+        game_state: GameState,
+        pillbug: HivePieceState,
+        target_piece: HivePieceState,
+        target_pos: HivePosition,
+        username: str,
+    ) -> Tuple[bool, str]:
+        return game_state.throw_piece(pillbug, target_piece, target_pos, username)
 
     async def send_game_state(self, event: Dict[str, Any] | None = None) -> None:
         game_state = await self.get_game_state()

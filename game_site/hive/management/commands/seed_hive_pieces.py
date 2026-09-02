@@ -11,6 +11,9 @@ class Command(BaseCommand):
         ("spider", 2),
         ("beetle", 2),
         ("grasshopper", 3),
+        ("mosquito", 1),
+        ("ladybug", 1),
+        ("pillbug", 1),
     ]
 
     MOVE_DESCRIPTIONS = {
@@ -19,6 +22,19 @@ class Command(BaseCommand):
         "spider": "Moves exactly 3 spaces around the hive.",
         "beetle": "Moves 1 space, can climb on top of other pieces.",
         "grasshopper": "Jumps in a straight line over pieces.",
+        "mosquito": (
+            "Copies the movement ability of any adjacent piece; on top of "
+            "the hive, moves only as a Beetle."
+        ),
+        "ladybug": (
+            "Moves exactly 3 spaces: climbs over two occupied hexes, then "
+            "drops onto an empty one."
+        ),
+        "pillbug": (
+            "Moves one adjacent space, or uses its special ability to move "
+            "an adjacent piece (friendly or enemy) to another empty "
+            "adjacent space, without disturbing the hive."
+        ),
     }
 
     COLOURS = ["white", "black"]

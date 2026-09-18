@@ -475,7 +475,12 @@ def test_pillbug_throw_freeze_rule():
     dest = HivePosition(q=0, r=-1, s=1)
 
     state.last_moved_piece_id = target.id
-    state.last_moved_ply = state.ply - 1  # moved on the immediately preceding ply
+    # `last_moved_ply` is set equal to `ply` when a move commits (see
+    # GameState._update_state_after_move), and both stay unchanged until the
+    # *next* move -- so "moved on the immediately preceding ply" means
+    # `last_moved_ply == state.ply` here, not `state.ply - 1` (which can
+    # never actually happen: the two are always kept in sync).
+    state.last_moved_ply = state.ply
     valid, message = pillbug_throw_valid(state, pillbug, target, dest)
     assert not valid
     assert "cannot be thrown" in message.lower()

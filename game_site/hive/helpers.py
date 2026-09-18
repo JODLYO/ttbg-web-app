@@ -42,6 +42,24 @@ def _shared_neighbors(a: AnyPos, b: AnyPos) -> List[AnyPos]:
     return list(na & nb)
 
 
+def _stack_height_at(state: HiveGameState, pos: HivePosition) -> int:
+    cell = state.board_state.cells.get(pos)
+    return len(cell.pieces) if cell else 0
+
+
+def _gated(state: HiveGameState, level: int, a: HivePosition, b: HivePosition) -> bool:
+    """Whether passage between adjacent `a`/`b` is blocked at the given
+    (1-indexed) elevation -- true when BOTH hexes shared between `a` and
+    `b` have a stack at least that tall, wedging anything trying to pass
+    between them at that height. Shared by beetle-style climbing, pillbug
+    throws, and ladybug moves -- every "piece passes over/through a gap at
+    some height" check in the game reduces to this (ported from hive-bot's
+    engine, which verified this against hivegame.com's own Rust engine)."""
+    n1, n2 = _shared_neighbors(a, b)
+    assert isinstance(n1, HivePosition) and isinstance(n2, HivePosition)
+    return _stack_height_at(state, n1) >= level and _stack_height_at(state, n2) >= level
+
+
 def _slide_step_legal(occupied: Set[Pos], current: Pos, nb: Pos) -> bool:
     """A slide across the edge from `current` to the adjacent, empty `nb`
     stays in contact with the hive's outer surface only if *exactly one* of
@@ -209,6 +227,17 @@ def beetle_move_valid(
     piece: HivePieceState,
     end_pos: HivePosition,
 ) -> bool:
+    """A beetle needs a gate check on *every* move, not just ground-level
+    lateral ones - climbing and descending between different stack heights
+    can still be wedged shut by two tall-enough flanking neighbors, exactly
+    like sliding on the ground can (ported from hive-bot's engine, which
+    confirmed against hivegame.com's own Rust engine test fixtures that
+    every real climb/descent needs this, not just the same-height lateral
+    case this used to special-case as automatically legal). Gate-checks
+    climbing at one above the destination's *current* height (the
+    elevation the beetle would land at) and descending/lateral moves at
+    the piece's own *current* elevation (the height it's departing from) -
+    both fold into the single threshold picked below."""
     start = piece.position
     if start is None:
         return False
@@ -217,38 +246,15 @@ def beetle_move_valid(
     if not start.is_adjacent_to(end_pos):
         return False
 
-    # if stack height different no sliding rule
     end_stack_height = 0
     if board_pos := state.board_state.cells.get(end_pos):
         end_stack_height = len(board_pos.pieces)
-    if piece.stack_height != end_stack_height:
-        return True
 
-    # If beetle is on ground, must obey sliding rules
-    return can_slide_beetle(state, start, end_pos, piece)
-
-
-def can_slide_beetle(
-    state: HiveGameState, start: HivePosition, end: HivePosition, piece: HivePieceState
-) -> bool:
-    pos_n1, pos_n2 = _shared_neighbors(
-        start, end
-    )  # always list of len 2 for adjacent tiles
-    assert isinstance(pos_n1, HivePosition)
-    assert isinstance(pos_n2, HivePosition)
-    height_pos_n1 = (
-        len(state.board_state.cells[pos_n1].pieces) - 1
-        if state.board_state.cells.get(pos_n1)
-        else -1
+    source_level = piece.stack_height + 1  # 1-indexed own elevation
+    threshold = (
+        end_stack_height + 1 if end_stack_height >= source_level else source_level
     )
-    height_pos_n2 = (
-        len(state.board_state.cells[pos_n2].pieces) - 1
-        if state.board_state.cells.get(pos_n2)
-        else -1
-    )
-    if height_pos_n1 >= piece.stack_height and height_pos_n2 >= piece.stack_height:
-        return False
-    return True
+    return not _gated(state, threshold, start, end_pos)
 
 
 def ladybug_move_valid(
@@ -260,7 +266,20 @@ def ladybug_move_valid(
     to another adjacent occupied hex, then drop onto an adjacent empty hex.
     Unlike can_slide_path this deliberately walks over occupied cells for the
     first two steps and requires the final cell to be empty, so it can't
-    reuse the empty-only sliding BFS."""
+    reuse the empty-only sliding BFS.
+
+    Each of the 3 hops needs its own gate check (previously missing
+    entirely - ported from hive-bot's engine, which confirmed this against
+    hivegame.com's Rust engine), not just the occupied/empty membership
+    tests below:
+      - hop 1 (start -> a, climbing onto the hive from the ground):
+        threshold = a's current height + 1 (the elevation landing there).
+      - hop 2 (a -> b, walking across the top from one occupied cell to
+        another): threshold = one more than the taller of the two, since
+        the ladybug's effective elevation during this hop is whichever of
+        "having just climbed to a" or "about to land on b" is higher.
+      - hop 3 (b -> c, descending to an empty cell): threshold = the
+        elevation it's descending *from* (b's height + 1)."""
     start = piece.position
     if start is None:
         return False
@@ -269,13 +288,23 @@ def ladybug_move_valid(
     occupied.discard(start)  # simulate lifting the ladybug itself
 
     for a in _neighbors(start):
+        assert isinstance(a, HivePosition)
         if a not in occupied:
             continue
+        if _gated(state, _stack_height_at(state, a) + 1, start, a):
+            continue
         for b in _neighbors(a):
+            assert isinstance(b, HivePosition)
             if b == start or b not in occupied:
                 continue
+            hop2_threshold = max(_stack_height_at(state, a), _stack_height_at(state, b)) + 1
+            if _gated(state, hop2_threshold, a, b):
+                continue
             for c in _neighbors(b):
+                assert isinstance(c, HivePosition)
                 if c == start or c == a or c in occupied:
+                    continue
+                if _gated(state, _stack_height_at(state, b) + 1, b, c):
                     continue
                 if c == end_pos:
                     return True
@@ -301,7 +330,7 @@ def mosquito_move_valid(
     adjacent_types = {
         cell.pieces[-1].piece_type
         for nb in _neighbors(start)
-        if (cell := state.board_state.cells.get(nb))
+        if isinstance(nb, HivePosition) and (cell := state.board_state.cells.get(nb))
     }
     adjacent_types.discard(HivePieceType.MOSQUITO)
 
@@ -344,7 +373,7 @@ def can_use_pillbug_throw(state: HiveGameState, piece: HivePieceState) -> bool:
     return any(
         cell.pieces[-1].piece_type == HivePieceType.PILLBUG
         for nb in _neighbors(piece.position)
-        if (cell := state.board_state.cells.get(nb))
+        if isinstance(nb, HivePosition) and (cell := state.board_state.cells.get(nb))
     )
 
 
@@ -355,8 +384,16 @@ def pillbug_throw_valid(
     target_pos: HivePosition,
 ) -> Tuple[bool, str]:
     """Pillbug special ability: lift an adjacent piece (friendly or enemy)
-    and place it on another empty hex adjacent to the Pillbug. This is a
-    lift, not a slide, so the sliding/gate rule does not apply.
+    and place it on another empty hex adjacent to the Pillbug.
+
+    The thrown piece still passes "over" the Pillbug at elevation 2 (both
+    it and the Pillbug are always ground-level, height 1), and again over
+    whatever's between the Pillbug and the destination - so it CAN be
+    wedged shut exactly like a beetle climbing that high, on either leg of
+    the throw. This was previously missing entirely (ported from
+    hive-bot's engine, which confirmed the omission against hivegame.com's
+    Rust engine's `can_throw_piece_to`), wrongly allowing throws through a
+    blocked gate.
 
     `pillbug` may also be a Mosquito copying the ability - see
     `can_use_pillbug_throw`, which the caller (GameState.throw_piece) is
@@ -382,9 +419,14 @@ def pillbug_throw_valid(
 
     if (
         state.last_moved_piece_id == target_piece.id
-        and state.last_moved_ply == state.ply - 1
+        and state.last_moved_ply == state.ply
     ):
         return False, "That piece moved last turn and cannot be thrown"
+
+    if _gated(state, 2, target_piece.position, pillbug.position):
+        return False, "Thrown piece is wedged and cannot lift off"
+    if _gated(state, 2, pillbug.position, target_pos):
+        return False, "Destination is wedged and cannot be thrown into"
 
     temp_board = state.board_state.model_copy(deep=True)
     del temp_board.cells[target_piece.position]

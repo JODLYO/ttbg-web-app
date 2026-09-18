@@ -26,6 +26,8 @@ class PlayerState(BaseModel):
     cards: List[CardContext]
     tricks_won: int = 0
     score: int = 0
+    round_start_score: int = 0
+    last_round_score: int = 0
 
 
 class DragonGameState(BaseModel):
@@ -43,4 +45,3 @@ class DragonGameState(BaseModel):
     waiting_for_trump_replacement: Optional[Dict] = None
     waiting_for_discard: Optional[Dict] = None
     winner: Optional[str] = None
-    next_trick_leader: Optional[str] = None

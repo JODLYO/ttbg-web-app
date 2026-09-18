@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 
 function GameBoard() {
-    const WINNING_SCORE = 10
+    const WINNING_SCORE = 21
     const NO_CARDS_IN_HAND = 13
     const socketRef = useRef<WebSocket | null>(null);
     const [gameState, setGameState] = useState<GameState | null>(null);

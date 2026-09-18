@@ -39,5 +39,4 @@ export interface GameState {
     waiting_for_trump_replacement?: { player: string };
     waiting_for_discard?: { player: string };
     winner?: string;
-    next_trick_leader?: string
 }

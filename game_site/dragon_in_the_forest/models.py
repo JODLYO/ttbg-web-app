@@ -11,7 +11,7 @@ from .game_state import DragonGameState, PlayerState, TrickState, CardContext, C
 logger = logging.getLogger(__name__)
 
 MAX_PLAYERS = 2
-WINNING_SCORE = 10
+WINNING_SCORE = 21
 LOWEST_CARD_VALUE = 1
 
 
@@ -151,6 +151,8 @@ class GameState(models.Model):
         if current_score:
             self.state_obj.player1.score = current_score["player_1"]
             self.state_obj.player2.score = current_score["player_2"]
+        self.state_obj.player1.round_start_score = self.state_obj.player1.score
+        self.state_obj.player2.round_start_score = self.state_obj.player2.score
         self.save()
 
     def initialize_game(self) -> None:
@@ -204,6 +206,11 @@ class GameState(models.Model):
         self, current_trick: TrickState, current_player_data: PlayerState
     ) -> None:
         winner = self._determine_trick_winner()
+        loser = (
+            self.state_obj.player2.username
+            if winner == self.state_obj.player1.username
+            else self.state_obj.player1.username
+        )
 
         extra_points = self._check_extra_point_special_ability(current_trick)
         if winner == self.state_obj.player1.username:
@@ -213,6 +220,17 @@ class GameState(models.Model):
             self.state_obj.player2.tricks_won += 1
             self.state_obj.player2.score += extra_points
 
+        # Swan (sp1): a player who plays it and loses the trick leads the
+        # next one anyway, overriding the normal winner-leads rule. If both
+        # players play a Swan, the loser (not whoever played theirs last)
+        # leads next.
+        loser_card = next(
+            card_state.card
+            for card_state in current_trick.cards
+            if card_state.player == loser
+        )
+        swan_override_leader = loser if loser_card.special_ability == "sp1" else None
+
         self.state_obj.previous_trick = current_trick.model_copy()
         self.state_obj.last_trick_winner = winner
 
@@ -221,11 +239,7 @@ class GameState(models.Model):
         else:
             current_trick.cards = []
             current_trick.led_suit = None
-            if next_trick_leader := self.state_obj.next_trick_leader:
-                self.state_obj.current_player = next_trick_leader
-                self.state_obj.next_trick_leader = None
-            else:
-                self.state_obj.current_player = winner
+            self.state_obj.current_player = swan_override_leader or winner
 
     def _switch_current_player(self) -> None:
         self.state_obj.current_player = (
@@ -256,9 +270,7 @@ class GameState(models.Model):
         if not current_trick.led_suit:
             current_trick.led_suit = card_context.suit
         if special_ability := card_context.special_ability:
-            if special_ability == "sp1":
-                self.state_obj.next_trick_leader = player_model.username
-            elif special_ability == "sp2" and len(current_player_data.cards) >= 1:
+            if special_ability == "sp2" and len(current_player_data.cards) >= 1:
                 self.state_obj.waiting_for_trump_replacement = {
                     "player": player_model.username,
                     "is_first_card": len(current_trick.cards) == 1,
@@ -356,6 +368,9 @@ class GameState(models.Model):
             if card_to_discard_id == card.id:
                 card_to_discard_index = i
                 current_player_state.cards.pop(card_to_discard_index)
+                # Woodcutter discards go to the bottom of the draw deck,
+                # face down -- not out of the game entirely.
+                current_state.deck.append(card)
                 break
         if card_to_discard_index is None:
             raise ValueError("Card not in player's hand")
@@ -473,15 +488,19 @@ class GameState(models.Model):
 
                 # If they have any cards of this suit
                 if suit_cards:
-                    # Check if the card they're playing is their highest of this suit
+                    # Monarch (11): holding a card of this suit forces playing a card
+                    # OF this suit -- specifically the 1, or the highest-ranked one.
+                    # Restricting only *which* in-suit card is allowed isn't enough;
+                    # a player holding a suit card can't dodge to a different suit.
                     card = Card.objects.get(id=card_id)
-                    if card.suit == first_card.suit:
-                        highest_value = max([c.value for c in suit_cards])
-                        if (
-                            card.value != highest_value
-                            and card.value != LOWEST_CARD_VALUE
-                        ):  # LOWEST_CARD_VALUE is the exception
-                            return False
+                    if card.suit != first_card.suit:
+                        return False
+                    highest_value = max([c.value for c in suit_cards])
+                    if (
+                        card.value != highest_value
+                        and card.value != LOWEST_CARD_VALUE
+                    ):  # LOWEST_CARD_VALUE is the exception
+                        return False
         return True
 
     def _check_extra_point_special_ability(self, current_trick: TrickState) -> int:
@@ -495,15 +514,23 @@ class GameState(models.Model):
         self.state_obj.round_over = True
         self._update_scores()
 
-        player1_score = self.state_obj.player1.score
-        player2_score = self.state_obj.player2.score
+        player1 = self.state_obj.player1
+        player2 = self.state_obj.player2
+        player1.last_round_score = player1.score - player1.round_start_score
+        player2.last_round_score = player2.score - player2.round_start_score
 
-        if player1_score >= WINNING_SCORE or player2_score >= WINNING_SCORE:
+        if player1.score >= WINNING_SCORE or player2.score >= WINNING_SCORE:
             self.state_obj.game_over = True
-            if player1_score > player2_score:
-                self.state_obj.winner = self.state_obj.player1.username
-            elif player2_score > player1_score:
-                self.state_obj.winner = self.state_obj.player2.username
+            if player1.score > player2.score:
+                self.state_obj.winner = player1.username
+            elif player2.score > player1.score:
+                self.state_obj.winner = player2.username
+            # Total score is tied: the official rule breaks the tie by
+            # whoever scored more points in this final round.
+            elif player1.last_round_score > player2.last_round_score:
+                self.state_obj.winner = player1.username
+            elif player2.last_round_score > player1.last_round_score:
+                self.state_obj.winner = player2.username
             else:
                 self.state_obj.winner = "tie"
         else:

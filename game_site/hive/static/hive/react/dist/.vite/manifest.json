@@ -1,11 +1,18 @@
 {
+  "../../../../hive-bot/js/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm": {
+    "file": "assets/ort-wasm-simd-threaded.jsep-D-icqfN-.wasm",
+    "src": "../../../../hive-bot/js/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm"
+  },
   "src/main.tsx": {
-    "file": "assets/main-dOZ_JIQ7.js",
+    "file": "assets/main-D6SdP2PF.js",
     "name": "main",
     "src": "src/main.tsx",
     "isEntry": true,
     "css": [
-      "assets/main-Cxx4x-e3.css"
+      "assets/main-HUcV60il.css"
+    ],
+    "assets": [
+      "assets/ort-wasm-simd-threaded.jsep-D-icqfN-.wasm"
     ]
   }
 }

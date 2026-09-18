@@ -20,10 +20,9 @@ class HivePieceType(str, Enum):
     SPIDER = "spider"
     BEETLE = "beetle"
     GRASSHOPPER = "grasshopper"
-    # Expansion pieces in future:
-    # MOSQUITO = "mosquito"
-    # LADYBUG = "ladybug"
-    # PILLBUG = "pillbug"
+    MOSQUITO = "mosquito"
+    LADYBUG = "ladybug"
+    PILLBUG = "pillbug"
 
 
 class HivePosition(BaseModel):
@@ -94,6 +93,14 @@ class HiveGameState(BaseModel):
 
     winner: Optional[str] = None
     game_over: bool = False
+
+    # Monotonically increasing per-move counter (unlike turn_no, which only
+    # increments once per round of both players' moves). Used by the
+    # Pillbug's "freeze rule": a piece cannot be thrown on the ply
+    # immediately after it was moved.
+    ply: int = 0
+    last_moved_piece_id: Optional[int] = None
+    last_moved_ply: Optional[int] = None
 
     def to_json_data(self) -> dict:
         data = self.model_dump(exclude={"board_state"})

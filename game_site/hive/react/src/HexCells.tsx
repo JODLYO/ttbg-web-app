@@ -4,6 +4,11 @@ const ICON_SIZE = 100;
 const ICON_X = 200 - ICON_SIZE / 2;
 const ICON_Y = 130 - ICON_SIZE / 2 - 5;
 
+const HEX_VIEW_BOX = "142.74 64 114 142.26";
+// The hex's own outline, shared by every SVG that needs to draw or trace
+// it (the top face, the highlight ring, ...) so they can't drift apart.
+const HEX_OUTLINE_POINTS = "200,65 256.26,98 256.26,162 200,195 143.74,162 143.74,98";
+
 let _hexIdCounter = 0;
 function useHexId() {
   const ref = useRef(`hex-${_hexIdCounter++}`);
@@ -33,7 +38,7 @@ export const HexCell2D: React.FC<HexCellProps> = ({
       draggable={false}
       style={{ width: size, height: size }}
     >
-      <svg viewBox="142.74 64 114 142.26" style={{ width: "100%", height: "100%" }}>
+      <svg viewBox={HEX_VIEW_BOX} style={{ width: "100%", height: "100%" }}>
         <defs>
           <filter id={glowId}>
             <feDropShadow
@@ -47,14 +52,7 @@ export const HexCell2D: React.FC<HexCellProps> = ({
         </defs>
 
         <polygon
-          points="
-            200,65
-            256.26,98
-            256.26,162
-            200,195
-            143.74,162
-            143.74,98
-          "
+          points={HEX_OUTLINE_POINTS}
           fill={highlight ? "#b8f5b8" : fill}
           stroke={highlight ? "#2ecc71" : "#253544"}
           strokeWidth={highlight ? 3 : 1.5}
@@ -79,6 +77,22 @@ export const HexCell2D: React.FC<HexCellProps> = ({
   );
 };
 
+/** A colored hex-outline overlay, layered on top of a hex cell (piece or
+ * empty) to mark it for a reason unrelated to drag/drop (a candidate
+ * move's from/to square, the last move played, etc). Rendered as an SVG
+ * confined to the same box as the cell it overlays -- unlike a plain CSS
+ * `outline` (which paints *outside* the border box and so gets visually
+ * clipped by whichever sibling hex the map iteration happens to render
+ * after it), this can never bleed into/get covered by a neighboring hex. */
+export const HexRing: React.FC<{ color: string }> = ({ color }) => (
+  <svg
+    viewBox={HEX_VIEW_BOX}
+    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+  >
+    <polygon points={HEX_OUTLINE_POINTS} fill="none" stroke={color} strokeWidth={6} />
+  </svg>
+);
+
 
 /* ---------------- 3D Hex ---------------- */
 export const HexCell3D: React.FC<HexCellProps> = ({
@@ -95,7 +109,7 @@ export const HexCell3D: React.FC<HexCellProps> = ({
   return (
     <div className="hex-piece" style={{ width: size, height: size }}>
       <svg
-        viewBox="142.74 64 114 142.26"
+        viewBox={HEX_VIEW_BOX}
         style={{ width: "100%", height: "100%", pointerEvents: "none" }}
       >
         <defs>
@@ -121,14 +135,7 @@ export const HexCell3D: React.FC<HexCellProps> = ({
 
         {/* top face */}
         <polygon
-          points="
-            200,65
-            256.26,98
-            256.26,162
-            200,195
-            143.74,162
-            143.74,98
-          "
+          points={HEX_OUTLINE_POINTS}
           fill={highlight ? "#b8f5b8" : fill}
           stroke={highlight ? "#2ecc71" : "#253544"}
           strokeWidth={highlight ? 3 : 1.5}

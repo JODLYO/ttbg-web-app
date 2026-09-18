@@ -1,1 +1,30 @@
-/* Game-specific styles for Hive lobby - currently none */
+/* Game-specific styles for Hive lobby */
+
+.expansion-settings {
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+}
+
+.expansion-settings-title {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.expansion-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-right: 1.25rem;
+    cursor: pointer;
+}
+
+.expansion-toggle input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.expansion-toggle input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+}

@@ -7,6 +7,12 @@ export default defineConfig({
   esbuild: {
     keepNames: true
   },
+  // Without this, Vite assumes the app is served from the site root and
+  // bakes absolute "/assets/..." URLs into the bundle for anything it
+  // resolves at build time (e.g. the analysisWorker.ts Worker chunk) --
+  // vite_tags.py/game_board.html manually construct the right URL for the
+  // *entry* JS/CSS, which is why only this dynamic-worker case broke.
+  base: '/static/hive/react/dist/',
   build: {
     sourcemap: true,
     minify: false,

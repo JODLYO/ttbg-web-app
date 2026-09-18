@@ -5,9 +5,9 @@ export enum HivePieceType {
     SPIDER = "spider",
     BEETLE = "beetle",
     GRASSHOPPER = "grasshopper",
-    // MOSQUITO = "mosquito",
-    // LADYBUG = "ladybug",
-    // PILLBUG = "pillbug",
+    MOSQUITO = "mosquito",
+    LADYBUG = "ladybug",
+    PILLBUG = "pillbug",
   }
   
   // Hex coordinate

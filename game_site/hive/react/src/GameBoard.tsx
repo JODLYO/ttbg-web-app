@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { HiveGameState, HivePieceState, HivePosition } from "./types";
 import HiveBoardSVG from "./HiveBoardSVG";
-import { HexCell3D } from "./HexCells";
-import Draggable from "react-draggable";
+import { PiecesStrip } from "./PiecesStrip";
 
 export default function GameBoard() {
   const socketRef = useRef<WebSocket | null>(null);
   const [gameState, setGameState] = useState<HiveGameState | null>(null);
   const [hoverHex, setHoverHex] = useState<HivePosition | null>(null);
+  const [armedPillbug, setArmedPillbug] = useState<HivePieceState | null>(null);
+  const [throwTarget, setThrowTarget] = useState<HivePieceState | null>(null);
 
   const gameData = (window as any).gameData;
   const { gameStateId, lobbyId, username } = gameData;
@@ -24,6 +25,41 @@ export default function GameBoard() {
       })
     );
   }
+
+  function cancelThrow() {
+    setArmedPillbug(null);
+    setThrowTarget(null);
+  }
+
+  function handleArmPillbug(piece: HivePieceState | null) {
+    setArmedPillbug((current) =>
+      current && piece && current.id === piece.id ? null : piece
+    );
+    setThrowTarget(null);
+  }
+
+  function handleCompleteThrow(pos: HivePosition) {
+    if (!socketRef.current || !armedPillbug || !throwTarget) return;
+
+    socketRef.current.send(
+      JSON.stringify({
+        action: "pillbug_throw",
+        pillbug: armedPillbug,
+        target_piece: throwTarget,
+        target_position: pos,
+        username,
+      })
+    );
+    cancelThrow();
+  }
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancelThrow();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   useEffect(() => {
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -112,12 +148,25 @@ export default function GameBoard() {
       </section>
 
       <section className="hive-section board">
+        {armedPillbug && (
+          <div className="pillbug-throw-hint">
+            {throwTarget
+              ? "Click an empty hex adjacent to the Pillbug to complete the throw (Esc to cancel)"
+              : "Click a piece adjacent to the Pillbug to throw it (Esc to cancel)"}
+          </div>
+        )}
         <HiveBoardSVG
           gameState={gameState}
           hoverHex={hoverHex}
           onHoverHexChange={setHoverHex}
           onDropPiece={sendMove}
           playerColors={playerColors}
+          currentUsername={username}
+          armedPillbug={armedPillbug}
+          throwTarget={throwTarget}
+          onArmPillbug={handleArmPillbug}
+          onSelectThrowTarget={setThrowTarget}
+          onCompleteThrow={handleCompleteThrow}
         />
       </section>
 
@@ -139,65 +188,3 @@ export default function GameBoard() {
   );
 }
 
-/* ================= hand pieces ================= */
-
-function PiecesStrip({
-  pieces,
-  colour,
-  title,
-  onDrop,
-}: {
-  pieces: HivePieceState[];
-  colour: string;
-  title: string;
-  onDrop?: (piece: HivePieceState, node: HTMLElement) => void;
-}) {
-  return (
-    <div className="pieces-block">
-      <div className="pieces-title">{title}</div>
-      <div className="pieces-row" style={{ display: "flex", gap: 6 }}>
-        {pieces.map((p) => (
-          <DraggableHandPiece
-            key={p.id}
-            piece={p}
-            colour={colour}
-            onDrop={onDrop}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DraggableHandPiece({
-  piece,
-  colour,
-  onDrop,
-}: {
-  piece: HivePieceState;
-  colour: string;
-  onDrop?: (piece: HivePieceState, node: HTMLElement) => void;
-}) {
-  const nodeRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <Draggable
-      nodeRef={nodeRef}
-      position={{ x: 0, y: 0 }}
-      bounds="body"
-      onStop={() => {
-        if (nodeRef.current) {
-          onDrop?.(piece, nodeRef.current);
-        }
-      }}
-    >
-      <div ref={nodeRef} style={{ cursor: "grab" }}>
-        <HexCell3D
-          size="var(--hex-size)"
-          fill={colour}
-          label={piece.piece_type}
-        />
-      </div>
-    </Draggable>
-  );
-}

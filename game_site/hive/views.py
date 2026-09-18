@@ -1,6 +1,7 @@
 import json
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.shortcuts import render
 from common.views import lobby_view, game_board_view, LobbyService
 
 from .models import Lobby, GameState, LobbyPlayer
@@ -22,6 +23,13 @@ def lobby(request):
 
 def game_board(request, game_state_id):
     return game_board_view(request, game_state_id, GameState, "hive/game_board.html")
+
+
+def analysis(request):
+    """Standalone analysis board: no lobby, no GameState row, no login --
+    the board and the bot both run entirely client-side (see
+    react/src/AnalysisBoard.tsx), so there's nothing server-side to own."""
+    return render(request, "hive/analysis.html")
 
 
 @login_required
@@ -46,8 +54,49 @@ def lobby_status(request, lobby_id):
         "csrf_token": request.META.get("CSRF_COOKIE"),
         "game_state_id": lobby_service.get_game_state_id(lobby),
         "lobby_id": lobby.id,
+        "mosquito_enabled": lobby.mosquito_enabled,
+        "ladybug_enabled": lobby.ladybug_enabled,
+        "pillbug_enabled": lobby.pillbug_enabled,
     }
     return JsonResponse(data)
+
+
+EXPANSION_SETTING_FIELDS = (
+    "mosquito_enabled",
+    "ladybug_enabled",
+    "pillbug_enabled",
+)
+
+
+@login_required
+def lobby_settings(request, lobby_id):
+    """Toggle which expansion pieces (Mosquito/Ladybug/Pillbug) are in play
+    for this lobby. Locked once the game has started."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        lobby = lobby_service.get_lobby(lobby_id)
+    except Lobby.DoesNotExist:
+        return JsonResponse({"error": "Lobby not found"}, status=404)
+
+    if not lobby.players.filter(id=request.user.id).exists():
+        return JsonResponse({"error": "You are not a player in this lobby"}, status=403)
+
+    if lobby_service.get_game_state_id(lobby) is not None:
+        return JsonResponse(
+            {"error": "Settings are locked once the game has started"}, status=400
+        )
+
+    body = json.loads(request.body or "{}")
+    for field in EXPANSION_SETTING_FIELDS:
+        if field in body:
+            setattr(lobby, field, bool(body[field]))
+    lobby.save()
+
+    return JsonResponse(
+        {field: getattr(lobby, field) for field in EXPANSION_SETTING_FIELDS}
+    )
 
 
 @login_required

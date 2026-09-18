@@ -5,6 +5,7 @@ app_name = "hive"
 
 urlpatterns = [
     path("lobby/", views.lobby, name="lobby"),
+    path("analysis/", views.analysis, name="analysis"),
     path("game/<int:game_state_id>/", views.game_board, name="game_board"),
     path("api/lobby_status/<int:lobby_id>/", views.lobby_status, name="lobby_status"),
     path(

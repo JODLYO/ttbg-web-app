@@ -1,0 +1,31 @@
+{% load static %}
+{% load vite_tags %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hive - Analysis Board</title>
+
+  <!-- React build CSS -->
+  <link rel="stylesheet" href="/static/{% vite_asset 'src/main.tsx' 'css' %}">
+</head>
+
+<body>
+  <div id="root"></div>
+  <div id="zoom-root"></div>
+
+  <!-- Tells App.tsx to render the standalone analysis board instead of the
+       live-game (WebSocket) board -- see src/App.tsx. -->
+  <script>
+    window.gameData = {
+      mode: "analysis",
+    };
+  </script>
+
+  <!-- React build JS -->
+  <script type="module" src="/static/{% vite_asset 'src/main.tsx' 'js' %}"></script>
+</body>
+
+</html>

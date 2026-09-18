@@ -7,7 +7,7 @@ import json
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from hive.models import Lobby, LobbyPlayer, Piece, GameState
-from hive.helpers import hive_is_connected, is_queen_surrounded
+from hive.helpers import hive_is_connected, is_queen_surrounded, beetle_move_valid
 from hive.game_state import (
     HivePosition,
     HivePieceType,
@@ -1053,3 +1053,144 @@ class ExpansionToggleTest(TestCase):
         self.assertEqual(response.status_code, 400)
         lobby.refresh_from_db()
         self.assertTrue(lobby.ladybug_enabled)  # unchanged - settings locked
+
+
+class BeetleStackHeightResetTest(TestCase):
+    """Regression: a Beetle (or Mosquito riding as one) that climbs back
+    down onto an empty hex must have its stack_height reset to 0 -
+    otherwise every later ground-level move wrongly skips the wedge/gate
+    check, since beetle_move_valid trusts the stored field directly rather
+    than recomputing it."""
+
+    @classmethod
+    def setUpTestData(cls):
+        if not Piece.objects.exists():
+            call_command("seed_hive_pieces")
+        cls.user1 = User.objects.create(username="player1")
+        cls.user2 = User.objects.create(username="player2")
+        cls.lobby = Lobby.objects.create()
+        LobbyPlayer.objects.create(lobby=cls.lobby, player=cls.user1, ready=True)
+        LobbyPlayer.objects.create(lobby=cls.lobby, player=cls.user2, ready=True)
+        cls.game_state = GameState.objects.create(lobby=cls.lobby)
+        cls.game_state.initialize_game_state([cls.user1, cls.user2])
+
+    def test_stack_height_resets_after_climbing_back_down(self):
+        state = self.game_state.state_obj
+        p1 = state.player1_state
+        p2 = state.player2_state
+
+        queen1 = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.QUEEN)
+        beetle = next(p for p in p1.pieces_in_hand if p.piece_type == HivePieceType.BEETLE)
+        queen2 = next(p for p in p2.pieces_in_hand if p.piece_type == HivePieceType.QUEEN)
+
+        origin = HivePosition(q=0, r=0, s=0)
+        beetle_start = HivePosition(q=1, r=-1, s=0)
+        queen2_pos = HivePosition(q=0, r=-1, s=1)
+
+        for piece, pos in ((queen1, origin), (beetle, beetle_start), (queen2, queen2_pos)):
+            piece.position = pos
+            piece.placed = True
+            piece.stack_height = 0
+        p1.has_placed_queen = True
+        p2.has_placed_queen = True
+        p1.pieces_in_hand = [p for p in p1.pieces_in_hand if p not in (queen1, beetle)]
+        p1.pieces_on_board = [queen1, beetle]
+        p2.pieces_in_hand = [p for p in p2.pieces_in_hand if p is not queen2]
+        p2.pieces_on_board = [queen2]
+
+        state.board_state = HiveBoardState(
+            cells={
+                origin: HiveBoardCell(position=origin, pieces=[queen1]),
+                beetle_start: HiveBoardCell(position=beetle_start, pieces=[beetle]),
+                queen2_pos: HiveBoardCell(position=queen2_pos, pieces=[queen2]),
+            }
+        )
+        self.game_state.state_obj = state
+        self.game_state.save()
+
+        # Beetle climbs onto the Queen at the origin.
+        state = self.game_state._update_state_after_move(state, p1, beetle, origin)
+        self.assertEqual(beetle.stack_height, 1)
+
+        # Beetle climbs back down onto an empty hex - stack_height must
+        # reset to 0, not stay stuck at its old elevated value.
+        landing = HivePosition(q=1, r=0, s=-1)
+        state = self.game_state._update_state_after_move(state, p1, beetle, landing)
+        self.assertEqual(beetle.stack_height, 0)
+
+        # Wedge a lateral ground move from the landing hex: fill both hexes
+        # shared between (1,0,-1) and (2,-1,-1).
+        wedge_a = HivePosition(q=2, r=0, s=-2)
+        wedge_b = HivePosition(q=1, r=-1, s=0)  # the beetle vacated this earlier
+        for i, wedge_pos in enumerate((wedge_a, wedge_b), start=90):
+            wedge_piece = HivePieceState(
+                id=i,
+                piece_type=HivePieceType.ANT,
+                owner="player2",
+                position=wedge_pos,
+                placed=True,
+                stack_height=0,
+            )
+            state.board_state.cells[wedge_pos] = HiveBoardCell(
+                position=wedge_pos, pieces=[wedge_piece]
+            )
+
+        dest = HivePosition(q=2, r=-1, s=-1)
+        self.assertFalse(beetle_move_valid(state, beetle, dest))
+
+
+class MosquitoPillbugThrowTest(TestCase):
+    """Regression: a Mosquito adjacent to a Pillbug should be able to use
+    the full `GameState.throw_piece` model method to copy its throw
+    ability - `throw_piece` used to unconditionally reject any thrower
+    that wasn't literally a Pillbug."""
+
+    @classmethod
+    def setUpTestData(cls):
+        if not Piece.objects.exists():
+            call_command("seed_hive_pieces")
+        cls.user1 = User.objects.create(username="player1")
+        cls.user2 = User.objects.create(username="player2")
+        cls.lobby = Lobby.objects.create()
+        LobbyPlayer.objects.create(lobby=cls.lobby, player=cls.user1, ready=True)
+        LobbyPlayer.objects.create(lobby=cls.lobby, player=cls.user2, ready=True)
+        cls.game_state = GameState.objects.create(lobby=cls.lobby)
+        cls.game_state.initialize_game_state([cls.user1, cls.user2])
+
+    def _play(self, state, p1_turn, pos, piece_type, username):
+        player = state.player1_state if p1_turn else state.player2_state
+        piece = next(p for p in player.pieces_in_hand if p.piece_type == piece_type)
+        valid, msg = self.game_state.play_piece(piece, pos, username=username)
+        self.assertTrue(valid, msg)
+        return piece
+
+    def test_mosquito_throws_via_model_method(self):
+        state = self.game_state.state_obj
+        self._play(state, True, HivePosition(q=0, r=0, s=0), HivePieceType.PILLBUG, "player1")
+        self._play(state, False, HivePosition(q=1, r=-1, s=0), HivePieceType.QUEEN, "player2")
+        self._play(state, True, HivePosition(q=-1, r=1, s=0), HivePieceType.MOSQUITO, "player1")
+        self._play(state, False, HivePosition(q=2, r=-2, s=0), HivePieceType.ANT, "player2")
+        # Player1's own Queen, placed adjacent to the Mosquito (not the
+        # Pillbug) - a Mosquito can throw a friendly piece too, same as a
+        # real Pillbug, and this keeps the throw anchored on the Mosquito's
+        # own position rather than the Pillbug's.
+        target = self._play(
+            state, True, HivePosition(q=0, r=1, s=-1), HivePieceType.QUEEN, "player1"
+        )
+        # Player2 moves in between so the target isn't frozen (moved on the
+        # immediately preceding ply) when player1 throws it next.
+        self._play(state, False, HivePosition(q=2, r=-1, s=-1), HivePieceType.SPIDER, "player2")
+
+        mosquito = state.board_state.cells[HivePosition(q=-1, r=1, s=0)].pieces[-1]
+        dest = HivePosition(q=-1, r=2, s=-1)  # empty, adjacent to the Mosquito
+
+        valid, msg = self.game_state.throw_piece(
+            mosquito, target, dest, username="player1"
+        )
+        self.assertTrue(valid, msg)
+
+        final = self.game_state.state_obj
+        self.assertIn(dest, final.board_state.cells)
+        self.assertEqual(final.board_state.cells[dest].pieces[-1].id, target.id)
+        self.assertNotIn(HivePosition(q=0, r=1, s=-1), final.board_state.cells)
+        self.assertFalse(final.player1_turn)  # turn passed to player2

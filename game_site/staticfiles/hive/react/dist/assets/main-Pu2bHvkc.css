@@ -1,0 +1,715 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+/* --- Responsive scaling variables --- */
+body {
+  display: block;
+  /* display: flex;
+  justify-content: center;
+  align-items: flex-start; */
+}
+
+:root {
+  --u: min(1.2vw, 1.2vh);
+
+  --font-sm: clamp(0.6rem, 1.4 * var(--u), 1.2rem);
+  --font-md: clamp(0.8rem, 2 * var(--u), 1.6rem);
+  --font-lg: clamp(1.2rem, 3 * var(--u), 2.4rem);
+
+  /* hex size for hand pieces */
+  --hex-size: clamp(28px, 6 * var(--u), 90px);
+
+  --pad: clamp(4px, 1.5 * var(--u), 20px);
+
+  /* Sidebar/card theming -- dark by default to match index.css's :root
+     (which defaults to dark and only lightens under `prefers-color-scheme:
+     light`, see below). These were previously hardcoded light-mode-only
+     hex values, which made the analysis sidebar's near-white text
+     unreadable against its own near-white card background whenever the
+     page was actually rendered dark (the common case, since dark is the
+     default here). */
+  --card-bg: #2a2d33;
+  --card-border: #3a3f47;
+  --divider-color: #3a3f47;
+  --button-bg: #33373f;
+  --button-border: #454b54;
+  --button-hover-bg: #3d424b;
+  --muted-color: #9aa4b2;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --card-bg: #f8f9fb;
+    --card-border: #e1e4e8;
+    --divider-color: #e1e4e8;
+    --button-bg: #fff;
+    --button-border: #d0d5dc;
+    --button-hover-bg: #eef1f5;
+    --muted-color: #6b7280;
+  }
+}
+
+/* --- Global --- */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-size: var(--font-md);
+  font-family: sans-serif;
+}
+
+/* --- Layout Grid --- */
+.hive-root {
+  height: 100vh;
+  width: 100%;
+  display: grid;
+  max-width: 1100px;
+  /* NEW — choose any max width */
+  margin: 0 auto;
+  /* NEW — centers the whole layout */
+  grid-template-rows: auto 1fr auto;
+
+  gap: var(--pad);
+  padding: var(--pad);
+  justify-items: center;
+}
+
+.hive-section {
+  text-align: center;
+  width: 100%;
+  padding: var(--pad) 0;
+  border-bottom: 1px solid var(--divider-color);
+}
+
+.hive-section.board {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+}
+
+.hive-board-origin {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+.hive-section.board>div {
+  /* width: 100vw;
+  height: 100vh; */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: auto;
+  /* z-index: 1; */
+}
+
+/* .hive-board-wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+} */
+
+.hive-hand {
+  position: relative;
+  z-index: 20;
+  /* hand sits above the board */
+  pointer-events: auto;
+  /* allow dragging */
+}
+
+.hive-board-wrapper {
+  position: relative;
+  /* width: 600px; */
+  width: auto;
+  /* pick any */
+  height: auto;
+  /* symmetric square */
+  pointer-events: auto;
+  z-index: auto;
+}
+
+.hive-board-wrapper>div {
+  pointer-events: none;
+}
+
+.hive-board-wrapper>div .hex-piece {
+  pointer-events: auto;
+  /* if you want board hexes to be clickable */
+}
+
+h1 {
+  font-size: var(--font-lg);
+  margin: 0;
+}
+
+h2 {
+  font-size: var(--font-md);
+  margin: 0;
+}
+
+.pieces-title {
+  font-size: var(--font-sm);
+  margin-bottom: calc(var(--pad) * 0.5);
+  font-weight: bold;
+}
+
+/* --- Pieces in Hand rows --- */
+.pieces-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--pad) * 0.6);
+  justify-content: center;
+}
+
+/* --- Our new responsive HexCell container --- */
+.hex-piece {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* --- Old board hex styles remain untouched --- */
+.hex {
+  width: 100%;
+  aspect-ratio: 1 / 0.866;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.12em solid #333;
+  background: var(--hex-color, #f8e38a);
+  font-weight: bold;
+}
+
+.hex::before,
+.hex::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  padding-bottom: 28.87%;
+  background: inherit;
+  border-left: inherit;
+  border-right: inherit;
+}
+
+.hex::before {
+  top: -28.87%;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.hex::after {
+  bottom: -28.87%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+/* --- Piece colors --- */
+.hex.queen {
+  --hex-color: #ff9f9f;
+}
+
+.hex.ant {
+  --hex-color: #fff;
+}
+
+.hex.spider {
+  --hex-color: #d7a4ff;
+}
+
+.hex.beetle {
+  --hex-color: #b8b8ff;
+}
+
+.hex.grasshopper {
+  --hex-color: #a6e27b;
+}
+
+.hive-board-viewport {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.turn-active {
+  border: 2px solid gold;
+  border-radius: 10px;
+  padding: calc(var(--pad) * 0.5);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  animation: turnPulse 1.6s infinite ease-in-out;
+}
+
+.game-over-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+
+.game-over-popup > div {
+  background: #111;
+  padding: 3rem 4rem;
+  border-radius: 16px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 0 30px gold;
+  animation: popIn 0.4s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.hive-section.you {
+  /* Remove the style={{ zIndex: 100 }} from the JSX too */
+  padding: var(--pad) 0;
+}
+
+/* And make sure both sections have consistent styling */
+.hive-section.opponent,
+.hive-section.you {
+  text-align: center;
+  width: 100%;
+  padding: var(--pad) 0;
+  border-bottom: 1px solid var(--divider-color);
+}
+
+.pillbug-throw-hint {
+  position: absolute;
+  top: calc(var(--pad) * 0.5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid #2ecc71;
+  border-radius: 6px;
+  padding: calc(var(--pad) * 0.4) calc(var(--pad) * 0.8);
+  font-size: var(--font-sm);
+  white-space: nowrap;
+}
+
+/* --- Analysis board: board stays the large, dominant element; analysis +
+   move history live in a narrow side column so they never compete with the
+   board for vertical space (the shared .hive-root grid above stacks
+   everything in one column, which is right for the live 2-player board but
+   starves the board when extra panels get added below it). --- */
+.hive-root.analysis-layout {
+  max-width: min(1600px, 96vw);
+  height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-rows: 1fr;
+  align-items: stretch;
+  gap: var(--pad);
+  padding: var(--pad);
+}
+
+.analysis-board-column {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: calc(var(--pad) * 0.5);
+  min-width: 0;
+  min-height: 0;
+}
+
+.analysis-board-column .hive-section.board {
+  min-height: 0;
+  flex: 1;
+}
+
+/* .hive-board-wrapper is width/height:auto by default (sized to its own
+   hex content) so it can sit inline in the live 2-player layout -- here it
+   needs to actively fill the large space this column gives it, since
+   HiveBoardSVG measures *this* element's rendered box to pick its hex
+   radius (see the ResizeObserver in HiveBoardSVG.tsx). */
+.analysis-board-column .hive-board-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.hive-section.compact {
+  padding: calc(var(--pad) * 0.5) 0;
+  border-bottom: none;
+}
+
+.hive-section.compact h2 {
+  font-size: var(--font-sm);
+  opacity: 0.7;
+  margin-bottom: calc(var(--pad) * 0.25);
+}
+
+.analysis-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.sidebar-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: calc(var(--pad) * 0.8);
+  text-align: left;
+  font-size: var(--font-sm);
+}
+
+.sidebar-card h2 {
+  font-size: var(--font-md);
+}
+
+.sidebar-card p {
+  margin: calc(var(--pad) * 0.4) 0;
+}
+
+.sidebar-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--pad) * 0.5);
+  margin-bottom: calc(var(--pad) * 0.5);
+}
+
+.muted {
+  color: var(--muted-color);
+}
+
+.expansion-toggle {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--pad) * 0.4);
+  cursor: pointer;
+}
+
+.expansion-toggle:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.analysis-error {
+  color: #c0392b;
+}
+
+.analysis-controls {
+  display: flex;
+  gap: calc(var(--pad) * 0.4);
+}
+
+.ghost-button {
+  font-size: var(--font-sm);
+  padding: calc(var(--pad) * 0.3) calc(var(--pad) * 0.6);
+  border: 1px solid var(--button-border);
+  border-radius: 6px;
+  background: var(--button-bg);
+  cursor: pointer;
+  color: inherit;
+}
+
+.ghost-button:hover:not(:disabled) {
+  background: var(--button-hover-bg);
+}
+
+.ghost-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.load-game-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: var(--font-sm);
+  resize: vertical;
+  margin-bottom: calc(var(--pad) * 0.4);
+}
+
+.loaded-game-controls {
+  margin-top: calc(var(--pad) * 0.5);
+}
+
+.loaded-game-nav {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--pad) * 0.3);
+  flex-wrap: wrap;
+}
+
+.loaded-game-position {
+  font-size: var(--font-sm);
+  color: var(--muted-color);
+  white-space: nowrap;
+}
+
+.board-zoom-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* `.hive-board-wrapper > div` (below) is pointer-events:none by default (so
+   drags/hover pass through to the wrapper over empty board space) -- opt
+   this control panel back in, same as `.hive-board-wrapper > div .hex-piece`
+   does for pieces. Needs the `>` combinator (not just `.board-zoom-controls`
+   alone) to out-specificity that rule, which also targets this element
+   directly since it's a same direct child div. */
+.hive-board-wrapper > .board-zoom-controls {
+  pointer-events: auto;
+}
+
+.move-preview-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 6px;
+  pointer-events: none;
+}
+
+.board-zoom-controls button {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--button-border);
+  border-radius: 6px;
+  background: var(--button-bg);
+  color: inherit;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.board-zoom-controls button:hover {
+  background: var(--button-hover-bg);
+}
+
+.win-probability-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-sm);
+  margin-bottom: calc(var(--pad) * 0.25);
+}
+
+.win-probability-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: #2c2f36;
+  overflow: hidden;
+}
+
+.win-probability-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f6c453, #f7dd8f);
+  transition: width 0.3s ease;
+}
+
+.best-move {
+  font-weight: bold;
+}
+
+.hoverable-move {
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.hoverable-move:hover {
+  background: var(--button-hover-bg);
+}
+
+.side-to-move-note {
+  margin-top: calc(var(--pad) * 0.25);
+  font-size: var(--font-sm);
+}
+
+.run-more-button {
+  margin-top: calc(var(--pad) * 0.5);
+  font-size: var(--font-sm);
+}
+
+.analysis-progress p {
+  margin-bottom: calc(var(--pad) * 0.25);
+}
+
+.analysis-progress-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.analysis-move-list {
+  list-style: none;
+  margin: calc(var(--pad) * 0.5) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--pad) * 0.2);
+}
+
+.analysis-move-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(var(--pad) * 0.5);
+  padding: calc(var(--pad) * 0.2) 0;
+  border-bottom: 1px dashed var(--divider-color);
+}
+
+.analysis-move-list li:last-child {
+  border-bottom: none;
+}
+
+.move-eval-pct {
+  color: var(--muted-color);
+  flex-shrink: 0;
+}
+
+.move-history {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.move-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.move-history-entry {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: calc(var(--pad) * 0.25) 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-size: var(--font-sm);
+  border-radius: 4px;
+}
+
+.move-history-entry:hover {
+  background: var(--button-hover-bg);
+  text-decoration: underline dotted;
+}
+
+.move-history-index {
+  color: var(--muted-color);
+}
+
+.copied-badge {
+  margin-left: calc(var(--pad) * 0.4);
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+@media (max-width: 860px) {
+  .hive-root.analysis-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    height: auto;
+  }
+
+  .analysis-board-column {
+    height: 70vh;
+  }
+
+  .analysis-sidebar {
+    overflow-y: visible;
+  }
+}

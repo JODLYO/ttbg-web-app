@@ -1,0 +1,79 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg:       #0d0d12;
+    --surface:  #15151e;
+    --card:     #1a1a26;
+    --border:   #2e2e45;
+    --gold:     #c9a84c;
+    --gold-dim: #7a6330;
+    --teal:     #2dd4bf;
+    --teal-dim: #0f5c54;
+    --text:     #e8e6df;
+    --muted:    #8a8778;
+    --red:      #e05c5c;
+}
+
+html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+.aiedit-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: transform .25s ease;
+}
+
+.aiedit-nav.nav-hidden {
+    transform: translateY(-100%);
+}
+
+.aiedit-nav .nav-home {
+    font-family: 'Cinzel', serif;
+    font-size: .75rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-decoration: none;
+}
+
+.aiedit-nav .nav-home:hover { color: #e8d5a3; }
+
+.aiedit-nav .nav-links { display: flex; gap: 8px; }
+
+.aiedit-nav .nav-links a {
+    font-family: 'Cinzel', serif;
+    font-size: .7rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: color .2s, border-color .2s;
+}
+
+.aiedit-nav .nav-links a:hover {
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.aiedit-body {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+}

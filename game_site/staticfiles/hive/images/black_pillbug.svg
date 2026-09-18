@@ -1,0 +1,33 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Head -->
+  <ellipse cx="100" cy="60" rx="18" ry="14" fill="#d9c2a8" stroke="#c9ac89" stroke-width="1"/>
+
+  <!-- Segmented body -->
+  <ellipse cx="100" cy="90" rx="30" ry="16" fill="#d9c2a8" stroke="#c9ac89" stroke-width="1"/>
+  <ellipse cx="100" cy="112" rx="34" ry="16" fill="#e6d4bd" stroke="#c9ac89" stroke-width="1"/>
+  <ellipse cx="100" cy="134" rx="34" ry="16" fill="#d9c2a8" stroke="#c9ac89" stroke-width="1"/>
+  <ellipse cx="100" cy="156" rx="30" ry="16" fill="#e6d4bd" stroke="#c9ac89" stroke-width="1"/>
+  <ellipse cx="100" cy="175" rx="22" ry="12" fill="#d9c2a8" stroke="#c9ac89" stroke-width="1"/>
+
+  <!-- Segment lines -->
+  <line x1="70" y1="101" x2="130" y2="101" stroke="#c9ac89" stroke-width="1.5"/>
+  <line x1="66" y1="123" x2="134" y2="123" stroke="#c9ac89" stroke-width="1.5"/>
+  <line x1="70" y1="145" x2="130" y2="145" stroke="#c9ac89" stroke-width="1.5"/>
+  <line x1="78" y1="165" x2="122" y2="165" stroke="#c9ac89" stroke-width="1.5"/>
+
+  <!-- Short antennae -->
+  <path d="M 90 50 Q 84 42 80 36" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 110 50 Q 116 42 120 36" stroke="#ffffff" stroke-width="2" fill="none"/>
+
+  <!-- Short legs, both sides -->
+  <path d="M 72 95 Q 55 92 45 90" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 128 95 Q 145 92 155 90" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 68 117 Q 50 117 40 118" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 132 117 Q 150 117 160 118" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 68 139 Q 50 142 40 146" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M 132 139 Q 150 142 160 146" stroke="#ffffff" stroke-width="2" fill="none"/>
+
+  <!-- Eyes -->
+  <circle cx="94" cy="58" r="2.5" fill="#2c2c2c"/>
+  <circle cx="106" cy="58" r="2.5" fill="#2c2c2c"/>
+</svg>

@@ -42,6 +42,21 @@ def _shared_neighbors(a: AnyPos, b: AnyPos) -> List[AnyPos]:
     return list(na & nb)
 
 
+def _slide_step_legal(occupied: Set[Pos], current: Pos, nb: Pos) -> bool:
+    """A slide across the edge from `current` to the adjacent, empty `nb`
+    stays in contact with the hive's outer surface only if *exactly one* of
+    the two hexes shared by both is occupied: zero occupied means the piece
+    would momentarily float free of the hive (illegal), and two occupied
+    means it's wedged between them and can't fit through the gate (also
+    illegal - the classic "gate" rule). This is a purely local check on the
+    edge being crossed, unlike a global "is nb adjacent to the hive
+    somewhere" connectivity check, which would wrongly accept a step whose
+    own edge has zero contact just because nb happens to touch some
+    unrelated piece elsewhere on the board."""
+    n1, n2 = _shared_neighbors(current, nb)
+    return (n1 in occupied) != (n2 in occupied)
+
+
 def can_slide_path(
     state: HiveGameState,
     start: HivePosition,
@@ -52,82 +67,68 @@ def can_slide_path(
     start_t = to_tuple(start)
     end_t = to_tuple(end)
 
-    temp_board = HiveBoardState(
-        cells={
-            pos: HiveBoardCell(
-                position=pos, pieces=list(state.board_state.cells[pos].pieces)
-            )
-            for pos in state.board_state.cells
-            if pos != start
-        }
-    )
-
     # occupied positions EXCEPT the start (simulate lifting the piece)
     occupied: Set[Pos] = {to_tuple(p) for p in state.board_state.cells.keys()}
     occupied.discard(start_t)
 
+    if require_exact_steps is not None:
+        # Exact-step search (Spider): "already visited" is a *per-path*
+        # constraint (don't cross a hex you've already visited within this
+        # same slide) - a hex one candidate path happens to pass through
+        # doesn't make it off-limits for a completely different path that
+        # reaches it another way, possibly at a different step count. So
+        # this needs a fresh visited set threaded through each recursive
+        # call, not one set shared across the whole search (unlike the
+        # unbounded/max-step case below, where plain reachability - not
+        # reachability-at-an-exact-step-count - is all that matters).
+        def dfs(
+            current: Pos, path: List[Pos], path_visited: Set[Pos]
+        ) -> Optional[List[Pos]]:
+            if len(path) - 1 == require_exact_steps:
+                return path if current == end_t else None
+            for nb in _neighbors(current):
+                assert isinstance(nb, tuple)
+                if nb in path_visited or nb in occupied:
+                    continue
+                if not _slide_step_legal(occupied, current, nb):
+                    continue
+                found = dfs(nb, path + [nb], path_visited | {nb})
+                if found is not None:
+                    return found
+            return None
+
+        result = dfs(start_t, [start_t], {start_t})
+        if result is None:
+            return False, None
+        return True, [_tuple_to_pos(p) for p in result]
+
+    # Unbounded / max-step search (Ant, Queen, Pillbug's own move): once a
+    # hex is legally reachable within the step budget, it stays reachable
+    # regardless of which path got there first, so a single shared visited
+    # set is a safe (and much cheaper) guard against re-expanding a node -
+    # only marked once a candidate step actually passes the legality check
+    # above, so a hex rejected via one edge can still be tried via another.
     visited = {start_t}
     queue = deque([(start_t, [start_t])])  # (position, path)
 
     while queue:
         current, path = queue.popleft()
         steps = len(path) - 1
-
-        if max_steps is not None and steps > max_steps:
+        if max_steps is not None and steps >= max_steps:
             continue
 
         for nb in _neighbors(current):
             assert isinstance(nb, tuple)
-            if nb in visited:
+            if nb in visited or nb in occupied:
+                continue
+            if not _slide_step_legal(occupied, current, nb):
                 continue
             visited.add(nb)
 
-            nb_occupied = nb in occupied
-            if nb_occupied:
-                # cannot slide into occupied cells (beetles handled elsewhere)
-                continue
-            temp_board.cells[_tuple_to_pos(nb)] = HiveBoardCell(
-                position=_tuple_to_pos(nb),
-                pieces=[
-                    HivePieceState(
-                        id=-1,  # dummy id
-                        piece_type=HivePieceType.QUEEN,  # type doesn't matter
-                        owner="temp",
-                        position=_tuple_to_pos(nb),
-                        placed=True,
-                    )
-                ],
-            )
-            if not hive_is_connected(temp_board):
-                del temp_board.cells[_tuple_to_pos(nb)]
-                continue
-            del temp_board.cells[_tuple_to_pos(nb)]
-
-            # sliding rule: wedge neighbors not both occupied
-            wedge = _shared_neighbors(current, nb)
-            both_blocked = True
-            for w in wedge:
-                if w not in occupied:
-                    both_blocked = False
-                    break
-            if both_blocked:
-                continue
-
             new_path = path + [nb]
-            new_steps = len(new_path) - 1
-
-            # reached target?
             if nb == end_t:
-                if require_exact_steps is not None:
-                    if new_steps == require_exact_steps:
-                        return True, [_tuple_to_pos(p) for p in new_path]
-                else:
-                    if max_steps is None or new_steps <= max_steps:
-                        return True, [_tuple_to_pos(p) for p in new_path]
-
-            # continue BFS if still allowed depth
-            if max_steps is None or new_steps < max_steps:
-                queue.append((nb, new_path))
+                return True, [_tuple_to_pos(p) for p in new_path]
+            queue.append((nb, new_path))
 
     return False, None
 
@@ -326,6 +327,27 @@ def mosquito_move_valid(
     return False
 
 
+def can_use_pillbug_throw(state: HiveGameState, piece: HivePieceState) -> bool:
+    """Whether `piece` may use the Pillbug's throw ability this turn: a
+    real Pillbug always can; a Mosquito copies the ability from *any*
+    adjacent Pillbug (friend or enemy), same as it copies any other
+    adjacent piece type's plain movement (see mosquito_move_valid) - but
+    only while grounded, since a Mosquito that's climbed onto a stack only
+    acts as a Beetle from then on (same restriction mosquito_move_valid
+    already applies)."""
+    if piece.piece_type == HivePieceType.PILLBUG:
+        return True
+    if piece.piece_type != HivePieceType.MOSQUITO or piece.stack_height > 0:
+        return False
+    if piece.position is None:
+        return False
+    return any(
+        cell.pieces[-1].piece_type == HivePieceType.PILLBUG
+        for nb in _neighbors(piece.position)
+        if (cell := state.board_state.cells.get(nb))
+    )
+
+
 def pillbug_throw_valid(
     state: HiveGameState,
     pillbug: HivePieceState,
@@ -334,7 +356,13 @@ def pillbug_throw_valid(
 ) -> Tuple[bool, str]:
     """Pillbug special ability: lift an adjacent piece (friendly or enemy)
     and place it on another empty hex adjacent to the Pillbug. This is a
-    lift, not a slide, so the sliding/gate rule does not apply."""
+    lift, not a slide, so the sliding/gate rule does not apply.
+
+    `pillbug` may also be a Mosquito copying the ability - see
+    `can_use_pillbug_throw`, which the caller (GameState.throw_piece) is
+    responsible for checking; this function only validates the throw's own
+    geometry/rules in terms of `pillbug.position`, which works unchanged
+    either way."""
     if pillbug.position is None or target_piece.position is None:
         return False, "illegal throw"
     if target_piece.id == pillbug.id:

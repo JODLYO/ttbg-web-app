@@ -13,6 +13,7 @@ from .game_state import (
 )
 from .helpers import (
     can_slide_path,
+    can_use_pillbug_throw,
     hive_is_connected,
     beetle_move_valid,
     grasshopper_jump_valid,
@@ -227,8 +228,8 @@ class GameState(models.Model):
 
         if not any(p for p in player.pieces_on_board if p == pillbug):
             return False, "You do not have that Pillbug on the board"
-        if pillbug.piece_type != HivePieceType.PILLBUG:
-            return False, "Only a Pillbug can throw"
+        if not can_use_pillbug_throw(state, pillbug):
+            return False, "Only a Pillbug (or a Mosquito copying one) can throw"
         if not player.has_placed_queen:
             return (
                 False,
@@ -399,6 +400,7 @@ class GameState(models.Model):
                 len(state.board_state.cells[placed_piece_pos].pieces) - 1
             )
         else:
+            piece.stack_height = 0
             state.board_state.cells[placed_piece_pos] = HiveBoardCell(
                 position=placed_piece_pos, pieces=[piece]
             )

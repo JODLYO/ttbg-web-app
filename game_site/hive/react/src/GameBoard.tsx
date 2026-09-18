@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HiveGameState, HivePieceState, HivePosition } from "./types";
 import HiveBoardSVG from "./HiveBoardSVG";
-import { HexCell3D } from "./HexCells";
-import Draggable from "react-draggable";
+import { PiecesStrip } from "./PiecesStrip";
 
 export default function GameBoard() {
   const socketRef = useRef<WebSocket | null>(null);
@@ -189,65 +188,3 @@ export default function GameBoard() {
   );
 }
 
-/* ================= hand pieces ================= */
-
-function PiecesStrip({
-  pieces,
-  colour,
-  title,
-  onDrop,
-}: {
-  pieces: HivePieceState[];
-  colour: string;
-  title: string;
-  onDrop?: (piece: HivePieceState, node: HTMLElement) => void;
-}) {
-  return (
-    <div className="pieces-block">
-      <div className="pieces-title">{title}</div>
-      <div className="pieces-row" style={{ display: "flex", gap: 6 }}>
-        {pieces.map((p) => (
-          <DraggableHandPiece
-            key={p.id}
-            piece={p}
-            colour={colour}
-            onDrop={onDrop}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DraggableHandPiece({
-  piece,
-  colour,
-  onDrop,
-}: {
-  piece: HivePieceState;
-  colour: string;
-  onDrop?: (piece: HivePieceState, node: HTMLElement) => void;
-}) {
-  const nodeRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <Draggable
-      nodeRef={nodeRef}
-      position={{ x: 0, y: 0 }}
-      bounds="body"
-      onStop={() => {
-        if (nodeRef.current) {
-          onDrop?.(piece, nodeRef.current);
-        }
-      }}
-    >
-      <div ref={nodeRef} style={{ cursor: "grab" }}>
-        <HexCell3D
-          size="var(--hex-size)"
-          fill={colour}
-          label={piece.piece_type}
-        />
-      </div>
-    </Draggable>
-  );
-}

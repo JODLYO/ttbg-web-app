@@ -1,6 +1,7 @@
 import json
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.shortcuts import render
 from common.views import lobby_view, game_board_view, LobbyService
 
 from .models import Lobby, GameState, LobbyPlayer
@@ -22,6 +23,13 @@ def lobby(request):
 
 def game_board(request, game_state_id):
     return game_board_view(request, game_state_id, GameState, "hive/game_board.html")
+
+
+def analysis(request):
+    """Standalone analysis board: no lobby, no GameState row, no login --
+    the board and the bot both run entirely client-side (see
+    react/src/AnalysisBoard.tsx), so there's nothing server-side to own."""
+    return render(request, "hive/analysis.html")
 
 
 @login_required

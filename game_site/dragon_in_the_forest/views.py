@@ -1,6 +1,7 @@
 import json
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.shortcuts import render
 from common.views import lobby_view, game_board_view, LobbyService
 
 from .models import Lobby, GameState, LobbyPlayer
@@ -23,6 +24,26 @@ def lobby(request):
 def game_board(request, game_state_id):
     return game_board_view(
         request, game_state_id, GameState, "dragon_in_the_forest/game_board.html"
+    )
+
+
+def vs_computer(request):
+    """Play against the bot: no lobby, no GameState row, no login -- the rules engine and
+    the bot's search both run entirely client-side (see react/src/VsComputerBoard.tsx)."""
+    return render(
+        request,
+        "dragon_in_the_forest/bot_game.html",
+        {"mode": "vs_computer", "page_title": "Vs Computer"},
+    )
+
+
+def analysis(request):
+    """Standalone analysis board: deal a round, play both sides, and see the bot's read on
+    the side to move. Client-side like `vs_computer` (react/src/AnalysisBoard.tsx)."""
+    return render(
+        request,
+        "dragon_in_the_forest/bot_game.html",
+        {"mode": "analysis", "page_title": "Analysis Board"},
     )
 
 

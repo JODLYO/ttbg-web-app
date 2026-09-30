@@ -5,8 +5,8 @@
 // hive-bot-web and analysisWorker.ts). Not a live/multiplayer game.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { GameState, Move, PieceType, PositionAnalysis, UndoInfo } from "hive-bot-web";
-import { GameState as HiveGameStateClass, MoveKind, applyMove, serializeGameState, undoMove } from "hive-bot-web";
+import type { GameState, Move, PieceType, PositionAnalysis, UndoInfo } from "hive-core";
+import { GameState as HiveGameStateClass, MoveKind, applyMove, serializeGameState, undoMove } from "hive-core";
 import { DEFAULT_NUM_SIMULATIONS, NUM_SIMULATIONS_INCREMENT } from "./analysisConstants";
 import HiveBoardSVG from "./HiveBoardSVG";
 import MiniBoard from "./MiniBoard";
@@ -153,7 +153,7 @@ export default function AnalysisBoard() {
   // fresh position starts at DEFAULT_NUM_SIMULATIONS with 0 visits so far
   // (runs the full default budget, same as before this existed); pausing
   // mid-search and resuming asks for only the remaining budget instead of
-  // restarting (HiveBot's own tree reuse, see hive-bot-web's
+  // restarting (HiveBot's own tree reuse, see hive-core's
   // HiveBot.findReusableRoot, means those extra simulations build on the
   // paused tree, not a fresh one); clicking "run more" raises the target
   // and the next call naturally asks for the difference.
@@ -779,7 +779,7 @@ function formatWinValue(winProbability: number): string {
 // Total simulations backing this analysis -- *cumulative*, not the
 // current call's own `progress.completed`. When HiveBot reuses a prior
 // search's tree (the position just played was already a child it had
-// explored -- see hive-bot-web's HiveBot.analyze), this starts well above
+// explored -- see hive-core's HiveBot.analyze), this starts well above
 // 0 and keeps growing move over move; `progress.completed` always resets
 // to 1 each call regardless, since it's just this call's own loop
 // counter. Showing this instead is what actually makes tree reuse visible
@@ -791,7 +791,7 @@ function totalVisits(analysis: PositionAnalysis): number {
 
 /** Like moveLog.ts's `describeMoveLogEntry`, but for an analysis
  * suggestion that's really several symmetric-equivalent moves (see
- * hive-bot-web's MoveEvaluation.equivalentMoves) -- lists every
+ * hive-core's MoveEvaluation.equivalentMoves) -- lists every
  * destination instead of just the one MCTS happened to search, e.g.
  * "Place Queen at (1, -1, 0), (1, 0, -1), ...". `equivalentMoves` always
  * includes `move` itself. */
@@ -810,7 +810,7 @@ function describeMoveWithEquivalents(
  * *from the current position* -- looks the source piece's position up
  * live against `state`, unlike a move-history entry which already has its
  * own recorded from/to (see moveLog.ts). `equivalentMoves` (see
- * hive-bot-web's MoveEvaluation.equivalentMoves) highlights every
+ * hive-core's MoveEvaluation.equivalentMoves) highlights every
  * symmetric-equivalent destination, not just `move`'s own -- defaults to
  * `[move]` for callers with no equivalents (e.g. a move-history entry has
  * its own separate highlight path, see MoveHistoryPanel above). */

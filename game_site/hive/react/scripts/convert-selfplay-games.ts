@@ -11,10 +11,10 @@
 // no enums/namespaces/decorators are used here, so no extra flag needed).
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { BASE_PIECE_TYPES } from "hive-bot-web";
+import { BASE_PIECE_TYPES } from "hive-core";
 import { toMoveLogEntry, type MoveLogEntry } from "../src/moveLog.ts";
 import { parseUhpHistory, winnerFromGameStatus, type GameStatus } from "../src/uhpNotation.ts";
-import { GameState as HiveGameStateClass, applyMove } from "hive-bot-web";
+import { GameState as HiveGameStateClass, applyMove } from "hive-core";
 
 interface ConvertedGame {
   moves: MoveLogEntry[];

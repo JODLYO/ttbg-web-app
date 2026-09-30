@@ -4,9 +4,9 @@
 // Loaded via Vite's `new Worker(new URL(...), { type: "module" })` pattern
 // from AnalysisBoard.tsx.
 
-import * as ort from "onnxruntime-web";
-import { COMPACT_BOARD_CONFIG, HiveBot, deserializeGameState } from "hive-bot-web";
-import type { PositionAnalysis, SerializedGameState } from "hive-bot-web";
+import { OrtWebEvaluator } from "evaluator-ort-web";
+import { COMPACT_BOARD_CONFIG, HiveBot, deserializeGameState } from "hive-core";
+import type { PositionAnalysis, SerializedGameState } from "hive-core";
 import { DEFAULT_NUM_SIMULATIONS } from "./analysisConstants";
 
 // Matches the vite_tags.py / game_board.html convention: the Vite build's
@@ -15,19 +15,19 @@ import { DEFAULT_NUM_SIMULATIONS } from "./analysisConstants";
 // root, so this is where Django ends up serving it -- see
 // hive/templates/hive/analysis.html.
 //
-// Always the expansion-trained checkpoint (canonicalized compact 18x28
-// grid -- see hive-bot's checkpoints/compact_mlp_1900/pretrain_epoch_2.pt
-// and export/onnx_export.py's --compact-board flag), for base-piece-only
-// games too, not just expansion ones.
+// Canonicalized compact 18x28 grid (export/onnx_export.py's --compact-board
+// flag). Its weights match hive-bot's
+// checkpoints/train_amount_sweep/batch_1500.pt exactly (see hive-app's
+// docs/engine-notes.md) -- used for base-piece-only games and expansion
+// ones alike.
 const MODEL_URL = "/static/hive/react/dist/models/hive_net_mlp.onnx";
 
 // Vite's own asset pipeline already detects and bundles the one WASM
 // runtime binary this actually needs (confirmed via `npm run build`) --
-// no wasmPaths override needed. Just force single-threaded: the
-// multi-threaded backend needs Cross-Origin-Opener-Policy/
+// no wasmPaths override needed. OrtWebEvaluator forces single-threaded
+// WASM itself: the multi-threaded backend needs Cross-Origin-Opener-Policy/
 // Cross-Origin-Embedder-Policy response headers Django isn't configured
 // to send.
-ort.env.wasm.numThreads = 1;
 
 console.log("[hive analysis worker] started");
 
@@ -36,7 +36,10 @@ let botPromise: Promise<HiveBot> | null = null;
 function getBot(): Promise<HiveBot> {
   botPromise ??= (async () => {
     console.log("[hive analysis worker] loading model from", MODEL_URL);
-    const bot = await HiveBot.fromModel(MODEL_URL, DEFAULT_NUM_SIMULATIONS, COMPACT_BOARD_CONFIG);
+    const bot = new HiveBot(await OrtWebEvaluator.load(MODEL_URL), {
+      numSimulations: DEFAULT_NUM_SIMULATIONS,
+      boardConfig: COMPACT_BOARD_CONFIG,
+    });
     console.log("[hive analysis worker] model loaded");
     return bot;
   })();
@@ -48,7 +51,7 @@ export interface AnalyzeRequest {
   requestId: number;
   state: SerializedGameState;
   // How many *new* simulations to run this call, on top of whatever
-  // HiveBot's own tree reuse (see hive-bot-web's HiveBot.findReusableRoot)
+  // HiveBot's own tree reuse (see hive-core's HiveBot.findReusableRoot)
   // already carries over for this exact position -- AnalysisBoard.tsx
   // computes this from its own running "target" simulation count minus
   // this position's current visit count, so a paused-then-resumed search
@@ -118,9 +121,8 @@ async function processRequest(request: AnalyzeRequest): Promise<void> {
     const bot = await getBot();
     const state = deserializeGameState(serialized);
     console.log("[hive analysis worker] request", requestId, "running search...");
-    const analysis = await bot.analyze(
-      state,
-      (completed, total, analysis) => {
+    const analysis = await bot.analyze(state, {
+      onProgress: (completed, total, analysis) => {
         const progress: AnalyzeProgressResponse = {
           type: "progress",
           requestId,
@@ -136,9 +138,9 @@ async function processRequest(request: AnalyzeRequest): Promise<void> {
       // result nobody will use, which otherwise made every move after the
       // first feel like it was waiting for *two* full searches back to back.
       // A `cancel` message (the UI pausing) abandons it the same way.
-      () => nextRequest === null && !cancelled,
+      shouldContinue: () => nextRequest === null && !cancelled,
       numSimulations,
-    );
+    });
     console.log("[hive analysis worker] request", requestId, "done");
     const response: AnalyzeResponse = { type: "analysis", requestId, analysis };
     self.postMessage(response);

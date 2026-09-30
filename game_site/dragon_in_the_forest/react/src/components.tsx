@@ -157,6 +157,7 @@ export function StaticHand({
     isDiscardMode,
     isTrumpReplacement,
     onPlayCard,
+    highlightedCardIds,
 }: {
     cards: { [key: number]: CardContext };
     gameState: GameState;
@@ -164,6 +165,7 @@ export function StaticHand({
     isDiscardMode: boolean;
     isTrumpReplacement: boolean;
     onPlayCard: (card: CardContext) => void;
+    highlightedCardIds?: ReadonlySet<number>;
 }) {
     const cardCount = Object.keys(cards).length;
     const [zoomedCard, setZoomedCard] = useState<string | null>(null);
@@ -181,6 +183,7 @@ export function StaticHand({
                     return (
                         <motion.div
                             key={cardId}
+                            className={highlightedCardIds?.has(card.id) ? "hand-slot highlighted" : "hand-slot"}
                             layout
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -240,18 +243,15 @@ export function isCardDisabled(
     if (gameState.current_trick?.cards.length === 1) {
         const firstCardEntry = gameState.current_trick.cards[0].card;
         // const firstCard = gameState.current_trick.cards[firstCardEntry.id];
-        if (firstCardEntry.special_ability === "sp6") {
-            const sameSuitCards = handArray.filter((c) => c.suit === card.suit);
-
-            if (sameSuitCards.length > 0) {
-                const highest = sameSuitCards.reduce((max, c) =>
-                    c.value > max.value ? c : max
-                );
-
-                // If this card is not the highest of its suit → disable
-                if (card.value !== highest.value && card.value !== 1) {
-                    return true;
-                }
+        if (firstCardEntry.special_ability === "sp6" && card.suit === firstCardEntry.suit) {
+            // Monarch: holding its suit forces the 1 or your highest card of that suit.
+            // Without that suit you may play anything (step 3 already handled following).
+            const sameSuitCards = handArray.filter((c) => c.suit === firstCardEntry.suit);
+            const highest = sameSuitCards.reduce((max, c) =>
+                c.value > max.value ? c : max
+            );
+            if (card.value !== highest.value && card.value !== 1) {
+                return true;
             }
         }
     }

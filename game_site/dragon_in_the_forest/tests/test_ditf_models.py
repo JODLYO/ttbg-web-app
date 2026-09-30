@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from dragon_in_the_forest.models import Card, GameState, LobbyPlayer, Lobby
+from dragon_in_the_forest.models import Card, GameState, LobbyPlayer, Lobby, WINNING_SCORE
 from django.core.management import call_command
 from dragon_in_the_forest.game_state import CardState, CardContext
 
@@ -290,7 +290,7 @@ class GameStateModelTest(TestCase):
         self.assertIsNone(result)
 
     def test_eleven_special_ability_different_suit(self):
-        """Test that when an 11 is played, player can play any card of a different suit."""
+        """A player holding NO card of the Monarch's suit may play any card."""
         # Get an 11 and a card of a different suit
         eleven_card = Card.objects.get(suit="fire", value=11)
         different_suit_card = Card.objects.exclude(suit="fire").first()
@@ -306,10 +306,10 @@ class GameStateModelTest(TestCase):
         # Set current player to player2
         self.game_state.state_obj.current_player = "player2"
 
-        # Add the different suit card to player2's hand
-        self.game_state.state_obj.player2.cards.append(
+        # player2's entire hand is the different-suit card -- no fire cards at all.
+        self.game_state.state_obj.player2.cards = [
             get_card_context_from_model_card(different_suit_card)
-        )
+        ]
 
         # Try to play a card of a different suit
         result = self.game_state._validate_move(
@@ -321,6 +321,37 @@ class GameStateModelTest(TestCase):
 
         # Should be valid
         self.assertIsNone(result)
+
+    def test_eleven_special_ability_cannot_dodge_to_different_suit(self):
+        """Holding a card of the Monarch's suit forces playing IN that suit -- a
+        player can't dodge to an off-suit card just because their only legal in-suit
+        choices are restricted to the 1 or the highest."""
+        eleven_card = Card.objects.get(suit="fire", value=11)
+        mid_fire_card = Card.objects.filter(suit="fire", value=5).first()
+        highest_fire_card = Card.objects.filter(suit="fire", value=9).first()
+        off_suit_card = Card.objects.exclude(suit="fire").first()
+
+        self.game_state.state_obj.current_trick.cards = [
+            CardState(
+                card=get_card_context_from_model_card(eleven_card), player="player1"
+            )
+        ]
+        self.game_state.state_obj.current_player = "player2"
+        self.game_state.state_obj.player2.cards = [
+            get_card_context_from_model_card(mid_fire_card),
+            get_card_context_from_model_card(highest_fire_card),
+            get_card_context_from_model_card(off_suit_card),
+        ]
+
+        result = self.game_state._validate_move(
+            User.objects.get(username="player2"),
+            off_suit_card.id,
+            self.game_state.state_obj.current_trick,
+            self.game_state.state_obj.player2,
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["error"], "Must play highest card of this suit")
 
     def test_make_move_basic(self):
         """Test that a normal card play updates trick and player hand correctly."""
@@ -458,3 +489,100 @@ class GameStateModelTest(TestCase):
             "player2",
             "After a first-card sp2 replacement, turn should switch to player2.",
         )
+
+    def test_winning_score_matches_official_rules(self):
+        """The Fox in the Forest plays to 21 points, not a house-ruled shorter game."""
+        self.assertEqual(WINNING_SCORE, 21)
+
+    def test_sp3_discard_goes_to_bottom_of_deck(self):
+        """Woodcutter (5/sp3) discards go to the bottom of the draw deck, not out of the game."""
+        sp3_card = get_card_context_from_model_card(
+            Card.objects.get(value=5, suit="fire")
+        )
+        discard_target = get_card_context_from_model_card(
+            Card.objects.exclude(id=sp3_card.id).first()
+        )
+
+        self.game_state.state_obj.player1.cards = [sp3_card, discard_target]
+        self.game_state.state_obj.player2.cards = [
+            get_card_context_from_model_card(
+                Card.objects.exclude(id__in=[sp3_card.id, discard_target.id]).first()
+            )
+        ]
+        self.game_state.state_obj.current_trick.cards = []
+        self.game_state.state_obj.current_player = "player1"
+        deck_size_before = len(self.game_state.state_obj.deck)
+
+        player1 = User.objects.get(username="player1")
+        self.game_state.make_move(player1, sp3_card)
+        self.assertIsNotNone(self.game_state.state_obj.waiting_for_discard)
+
+        result = self.game_state.discard_card(player1, discard_target.id)
+
+        # One card was drawn from the top, one was discarded to the bottom:
+        # the deck's size is unchanged, and the discard is now its last card.
+        self.assertEqual(len(result.deck), deck_size_before)
+        self.assertEqual(result.deck[-1].id, discard_target.id)
+
+    def test_sp1_two_swans_loser_leads(self):
+        """If both players play the 1 (Swan), the loser leads next -- not whoever played theirs last."""
+        trump_suit = Card.objects.get(id=self.game_state.state_obj.trump_card.id).suit
+        non_trump_suits = [
+            suit for suit, _ in Card.SUIT_CHOICES if suit != trump_suit
+        ]
+        lead_suit, other_suit = non_trump_suits[0], non_trump_suits[1]
+
+        lead_swan = get_card_context_from_model_card(
+            Card.objects.get(suit=lead_suit, value=1)
+        )
+        follow_swan = get_card_context_from_model_card(
+            Card.objects.get(suit=other_suit, value=1)
+        )
+
+        self.game_state.state_obj.current_trick.cards = [
+            CardState(card=lead_swan, player="player1"),
+            CardState(card=follow_swan, player="player2"),
+        ]
+        self.game_state.state_obj.current_trick.led_suit = lead_suit
+        self.game_state.state_obj.player1.cards = [
+            get_card_context_from_model_card(Card.objects.exclude(value=1).first())
+        ]
+        self.game_state.state_obj.player2.cards = [
+            get_card_context_from_model_card(
+                Card.objects.exclude(value=1)
+                .exclude(id=self.game_state.state_obj.player1.cards[0].id)
+                .first()
+            )
+        ]
+
+        # Neither card is trump, so the lead suit (player1's swan) wins the trick.
+        winner = self.game_state._determine_trick_winner()
+        self.assertEqual(winner, "player1")
+
+        self.game_state._handle_trick_completion(
+            self.game_state.state_obj.current_trick, self.game_state.state_obj.player2
+        )
+
+        # player2 lost the trick but also played a Swan, so player2 leads next
+        # -- not player1, who actually won it.
+        self.assertEqual(self.game_state.state_obj.current_player, "player2")
+
+    def test_tiebreak_uses_last_round_score(self):
+        """If total score ties at game end, the player with more points in the final round wins."""
+        player1 = self.game_state.state_obj.player1
+        player2 = self.game_state.state_obj.player2
+
+        player1.round_start_score = 18
+        player1.score = 18
+        player1.tricks_won = 6  # 6 tricks -> +3 points -> final 21
+
+        player2.round_start_score = 15
+        player2.score = 15
+        player2.tricks_won = 9  # 7-9 tricks -> +6 points -> final 21
+
+        self.game_state._handle_round_over()
+
+        self.assertEqual(self.game_state.state_obj.player1.score, 21)
+        self.assertEqual(self.game_state.state_obj.player2.score, 21)
+        self.assertTrue(self.game_state.state_obj.game_over)
+        self.assertEqual(self.game_state.state_obj.winner, "player2")

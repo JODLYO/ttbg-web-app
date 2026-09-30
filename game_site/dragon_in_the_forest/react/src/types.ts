@@ -7,7 +7,8 @@ export interface CardContext {
 
 export interface CardState {
     card: CardContext;
-    player: PlayerState;
+    // The live server sends the username here; the UI only ever reads `.card`.
+    player: PlayerState | string;
 }
 
 export interface TrickState {
@@ -22,6 +23,8 @@ export interface PlayerState {
     cards: CardContext[];
     tricks_won: number;
     score: number;
+    round_start_score?: number;
+    last_round_score?: number;
 }
 
 export interface GameState {
@@ -39,5 +42,4 @@ export interface GameState {
     waiting_for_trump_replacement?: { player: string };
     waiting_for_discard?: { player: string };
     winner?: string;
-    next_trick_leader?: string
 }

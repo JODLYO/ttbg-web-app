@@ -85,7 +85,7 @@ export default function HiveBoardSVG({
    * highlight on the board -- `from` null for a placement (no single
    * source piece to point at). `to` is a list, not a single hex: a hovered
    * analysis suggestion that's really several symmetric-equivalent
-   * placements (see hive-bot-web's openingSymmetry.ts/MoveEvaluation.
+   * placements (see hive-core's openingSymmetry.ts/MoveEvaluation.
    * equivalentMoves) highlights every one of them, not just the
    * representative MCTS happened to search; a move-history entry always
    * passes a single-element list. */

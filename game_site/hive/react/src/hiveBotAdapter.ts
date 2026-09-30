@@ -1,4 +1,4 @@
-// Bridges hive-bot-web's engine state (Maps, numeric piece-type enum) and
+// Bridges hive-core's engine state (Maps, numeric piece-type enum) and
 // this app's existing HiveGameState shape (types.ts, string piece types,
 // username-keyed players) so the analysis board can reuse HiveBoardSVG/
 // HexCells unchanged -- see GameBoard.tsx for the shape those already
@@ -12,7 +12,7 @@
 // set are handled the same way either way, this only picks which pieces
 // are in play.
 
-import type { GameState, Move, PieceType, Pos } from "hive-bot-web";
+import type { GameState, Move, PieceType, Pos } from "hive-core";
 import {
   ALL_PIECE_TYPES,
   BASE_PIECE_TYPES,
@@ -21,7 +21,7 @@ import {
   MoveKind,
   applyMove,
   generateLegalMoves,
-} from "hive-bot-web";
+} from "hive-core";
 import { HivePieceType } from "./types";
 import type {
   HiveBoardCell,
@@ -34,7 +34,7 @@ import type {
 export const ANALYSIS_ENABLED_TYPES = BASE_PIECE_TYPES;
 export const EXPANSION_ENABLED_TYPES: ReadonlySet<PieceType> = new Set(ALL_PIECE_TYPES);
 
-// Index i <-> hive-bot-web's PieceType value i (see engine/constants.ts) --
+// Index i <-> hive-core's PieceType value i (see engine/constants.ts) --
 // same ordinal order on both sides, this is just naming them.
 const PIECE_TYPE_NAMES: HivePieceType[] = [
   HivePieceType.QUEEN,

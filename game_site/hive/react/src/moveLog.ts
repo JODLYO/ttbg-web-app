@@ -5,7 +5,7 @@
 // scripts/convert-selfplay-games.ts, which produces files of these for the
 // "load game" feature to replay directly.
 
-import { MoveKind, type GameState, type Move, type PieceType } from "hive-bot-web";
+import { MoveKind, type GameState, type Move, type PieceType } from "hive-core";
 
 export const PIECE_TYPE_LABELS = [
   "Queen",
@@ -33,7 +33,7 @@ export interface MoveLogEntry {
   thrownPieceId?: number;
   /** THROW only: the thrower's own type -- a Pillbug always, but also a
    * Mosquito copying an adjacent Pillbug's throw ability (see
-   * hive-bot-web's engine/moves.ts canThrow), so the description below
+   * hive-core's engine/moves.ts canThrow), so the description below
    * can't just hardcode "Pillbug throws...". */
   throwerPieceType?: PieceType;
 }
@@ -69,7 +69,7 @@ export function describeMoveLogEntry(entry: MoveLogEntry): string {
 }
 
 /** Same as `describeMoveLogEntry`, but for an analysis suggestion that's
- * really several symmetric-equivalent moves (see hive-bot-web's
+ * really several symmetric-equivalent moves (see hive-core's
  * openingSymmetry.ts/MoveEvaluation.equivalentMoves) -- lists every
  * destination instead of just the one MCTS happened to search, e.g.
  * "Place Queen at (1, -1, 0), (1, 0, -1), (0, 1, -1), ...". `destinations`

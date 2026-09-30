@@ -13,8 +13,8 @@
 // file's docstring for the full grammar and why the HEX_DIRS-derived
 // direction assignment below has to match it exactly.
 
-import type { GameState, Move, Owner, PieceType, Pos } from "hive-bot-web";
-import { BASE_PIECE_TYPES, GameState as HiveGameStateClass, MoveKind, applyMove, generateLegalMoves } from "hive-bot-web";
+import type { GameState, Move, Owner, PieceType, Pos } from "hive-core";
+import { BASE_PIECE_TYPES, GameState as HiveGameStateClass, MoveKind, applyMove, generateLegalMoves } from "hive-core";
 
 export class UhpParseError extends Error {}
 
